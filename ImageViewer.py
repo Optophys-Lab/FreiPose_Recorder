@@ -4,7 +4,7 @@ import pyqtgraph as pg
 from pyqtgraph import ImageView, RawImageWidget, GraphicsView, ImageItem, GraphicsWidget, PlotWidget
 from datetime import datetime
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QDialog, QSizePolicy, \
-    QGridLayout, QToolBox,  QDoubleSpinBox, QComboBox, QLabel
+    QGridLayout, QToolBox, QDoubleSpinBox, QComboBox, QLabel
 from PyQt6 import uic, QtCore, QtGui, QtWidgets
 import numpy as np
 
@@ -16,6 +16,7 @@ class MultiCameraViewer(QWidget):
     """
     A widget that displays the images from multiple cameras.
     """
+
     def __init__(self, parent=None, num_cameras=4):
         super().__init__(parent)
         self.grid = None
@@ -24,6 +25,7 @@ class MultiCameraViewer(QWidget):
         self.parent = parent
         self.init_ui()
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
     @property
     def num_cameras(self):
         return self._num_cameras
@@ -79,7 +81,7 @@ class ImageView_camera(QWidget):
         # Create a layout for the image widget
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        #layout.setSpacing(0)
+        # layout.setSpacing(0)
         # Create a RawImageWidget
         self.image_view = pg.RawImageWidget(scaled=True)
         self.image_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -102,7 +104,6 @@ class ImageView_camera(QWidget):
                 self.image_view.setImage(image.T)
         except ValueError:
             print("Image could not be displayed. this format is not implemented")
-
 
 
 class ImageView_camera_old(QWidget):
@@ -173,7 +174,7 @@ class SingleCamViewer(QDialog):
         blur_strength = cv2.Laplacian(roi, cv2.CV_16S, 5).var()
         if self.previousBlur_value is None:
             self.previousBlur_value = blur_strength
-        blur_strength = ((blur_strength - self.previousBlur_value) / self.previousBlur_value +0.5)*100
+        blur_strength = ((blur_strength - self.previousBlur_value) / self.previousBlur_value + 0.5) * 100
 
         self.progressBar.setValue(blur_strength)
 
@@ -209,6 +210,7 @@ class SingleCamViewer(QDialog):
         else:
             self.log.debug("Closed by parent")
 
+
 class SingleCameraSettings(QWidget):
     def __init__(self, parent=None, name='Camera'):
         super(SingleCameraSettings, self).__init__(parent)
@@ -233,7 +235,6 @@ class SingleCameraSettings(QWidget):
         hbox.addWidget(self.ExposureTime_spin)
         self.layout.addLayout(hbox)
 
-
         self.gain_label = QLabel(self)
         self.gain_label.setText("Gain")
         self.Gain_spin = QDoubleSpinBox(self)
@@ -245,7 +246,7 @@ class SingleCameraSettings(QWidget):
         hbox.addWidget(self.gain_label)
         hbox.addWidget(self.Gain_spin)
         self.layout.addLayout(hbox)
-        #self.layout.addWidget(self.Gain_spin)
+        # self.layout.addWidget(self.Gain_spin)
 
         self.colorlabel = QLabel(self)
         self.colorlabel.setText("Color mode")
@@ -256,9 +257,11 @@ class SingleCameraSettings(QWidget):
         self.setLayout(self.layout)
         self.setFont(font)
         self.show()
-    def set_colormodes(self, colormodes:list):
+
+    def set_colormodes(self, colormodes: list):
         self.ColorMode_comboBox.clear()
         self.ColorMode_comboBox.addItems(colormodes)
+
 
 # create a class to dynamically create camera tabs according to number of cameras
 class CameraSettingsTab(QWidget):
@@ -293,7 +296,7 @@ class CameraSettingsTab(QWidget):
     def init_ui(self):
         font = QtGui.QFont()
         font.setPointSize(9)
-        self.layout= QVBoxLayout(self)
+        self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)
         self.toolbox = QToolBox()
 
@@ -324,8 +327,9 @@ class CameraSettingsTab(QWidget):
         self.ConnectSignals()  # reconnect with new widgets
 
     def parent_gain_exposure(self):
-        self.parent.parent().set_gain_exposure()  #because of the promoted parent widget
-    def parent_color_mode(self, color_mode:str):
+        self.parent.parent().set_gain_exposure()  # because of the promoted parent widget
+
+    def parent_color_mode(self, color_mode: str):
         self.parent.parent().set_color_mode(color_mode)
 
     def ConnectSignals(self):
@@ -341,6 +345,7 @@ class RemoteConnDialog(QtWidgets.QDialog):
     """
     Dialog to wait for remote connection, with abort button
     """
+
     def __init__(self, socket_comm, parent=None):
         super().__init__(parent)
         self.parent = parent
@@ -380,3 +385,107 @@ class RemoteConnDialog(QtWidgets.QDialog):
         self.stopwaiting()
         self.aborted = True
         event.accept()
+
+
+class TagDetector_other:
+    def __init__(self):
+        """"""
+        from AprilTag.scripts import apriltag
+        options = apriltag.DetectorOptions(families='tag36h11',
+                                           border=0,
+                                           nthreads=4,
+                                           quad_decimate=10.0,
+                                           quad_blur=1.0,
+                                           refine_edges=True,
+                                           refine_decode=True,
+                                           refine_pose=False,
+                                           debug=False,
+                                           quad_contours=True)
+        self.detector = apriltag.Detector(options, searchpath=apriltag._get_dll_path())
+
+    def detect(self, frame):
+        t0 = time.time()
+        if frame.ndim == 3:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = frame
+        try:
+            detections = self.detector.detect(gray)
+        except:
+            detections = []
+        for r in detections:
+            # extract the bounding box (x, y)-coordinates for the AprilTag
+            # and convert each of the (x, y)-coordinate pairs to integers
+            (ptA, ptB, ptC, ptD) = r.corners
+            ptB = (int(ptB[0]), int(ptB[1]))
+            ptC = (int(ptC[0]), int(ptC[1]))
+            ptD = (int(ptD[0]), int(ptD[1]))
+            ptA = (int(ptA[0]), int(ptA[1]))
+            # draw the bounding box of the AprilTag detection
+            cv2.line(frame, ptA, ptB, (0, 255, 0), 2)
+            cv2.line(frame, ptB, ptC, (0, 255, 0), 2)
+            cv2.line(frame, ptC, ptD, (0, 255, 0), 2)
+            cv2.line(frame, ptD, ptA, (0, 255, 0), 2)
+            # draw the center (x, y)-coordinates of the AprilTag
+            (cX, cY) = (int(r.center[0]), int(r.center[1]))
+            cv2.circle(frame, (cX, cY), 5, (0, 0, 255), -1)
+            # draw the tag family on the image
+            tagFamily = r.tag_family.decode("utf-8")
+            cv2.putText(frame, tagFamily, (ptA[0], ptA[1] - 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            #print("[INFO] tag family: {}".format(tagFamily))
+        t1 = time.time()
+        print(f'tag detection took {t1-t0} s')
+        return detections, frame
+
+# class for detection of tags in frames
+class TagDetector:
+    def __init__(self):
+        """"""
+        import apriltag_my
+        options = apriltag.DetectorOptions(families='tag36h11',
+                                           border=0,
+                                           nthreads=4,
+                                           quad_decimate=1.0,
+                                           quad_blur=2.0,
+                                           refine_edges=True,
+                                           refine_decode=True,
+                                           refine_pose=False,
+                                           debug=False,
+                                           quad_contours=True)
+        self.detector = apriltag.Detector(options)
+    def detect(self, frame):
+        t0 = time.time()
+        if frame.ndim == 3:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = frame
+        try:
+            detections = self.detector.detect(gray)
+        except:
+            detections = []
+        for r in detections:
+            # extract the bounding box (x, y)-coordinates for the AprilTag
+            # and convert each of the (x, y)-coordinate pairs to integers
+            (ptA, ptB, ptC, ptD) = r.corners
+            ptB = (int(ptB[0]), int(ptB[1]))
+            ptC = (int(ptC[0]), int(ptC[1]))
+            ptD = (int(ptD[0]), int(ptD[1]))
+            ptA = (int(ptA[0]), int(ptA[1]))
+            # draw the bounding box of the AprilTag detection
+            cv2.line(frame, ptA, ptB, (0, 255, 0), 2)
+            cv2.line(frame, ptB, ptC, (0, 255, 0), 2)
+            cv2.line(frame, ptC, ptD, (0, 255, 0), 2)
+            cv2.line(frame, ptD, ptA, (0, 255, 0), 2)
+            # draw the center (x, y)-coordinates of the AprilTag
+            (cX, cY) = (int(r.center[0]), int(r.center[1]))
+            cv2.circle(frame, (cX, cY), 5, (0, 0, 255), -1)
+            # draw the tag family on the image
+            tagFamily = r.tag_family.decode("utf-8")
+            cv2.putText(frame, tagFamily, (ptA[0], ptA[1] - 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            #print("[INFO] tag family: {}".format(tagFamily))
+        t1 = time.time()
+        print(f'tag detection took {t1-t0} s')
+        return detections, frame
+

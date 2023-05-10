@@ -30,7 +30,7 @@ from PyQt6 import uic, QtGui, QtSerialPort
 
 from pathlib import Path
 from core.Recorder_my import Recorder
-from ImageViewer import SingleCamViewer, RemoteConnDialog
+from ImageViewer import SingleCamViewer, RemoteConnDialog, TagDetector_other
 from utils.StitchedImage import StitchedImage
 from utils.socket_utils import SocketComm
 from core.Trigger import TriggerArduino
@@ -88,6 +88,7 @@ class BASLER_GUI(QMainWindow):
             self.trigger = TriggerArduino(serial_port)
         else:
             self.trigger = None
+        self.TagDetector = TagDetector_other()
 
     ### Device Connectivity ####
     def scan_cams(self):
@@ -320,6 +321,7 @@ class BASLER_GUI(QMainWindow):
         """
         try:
             currentImg = self.basler_recorder.single_view_queue.get_nowait()
+            _,currentImg = self.TagDetector.detect(currentImg)
             # self.log.debug(f"Nr elements in q {self.basler_recorder.single_view_queue.qsize()}")
             self.statusbar.showMessage(f"In Q :{self.basler_recorder.single_view_queue.qsize()}")
         except Empty:  # if queue is empty just return
