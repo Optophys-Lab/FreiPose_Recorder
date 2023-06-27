@@ -20,7 +20,7 @@ from FreiPose_Recorder.utils.VideoWriterFast_gear import QueueOverflow
 
 from FreiPose_Recorder.configs.camera_enums import CameraIdentificationSN
 
-from FreiPose_Recorder.params import TIME_STAMP_STRING, TRIGGER_LINE_IN, TRIGGER_LINE_OUT, MAX_FPS
+from FreiPose_Recorder.params import TIME_STAMP_STRING, TRIGGER_LINE_IN, TRIGGER_LINE_OUT, MAX_FPS, STREAM_CAMERA
 
 
 # Another way to get warnings when images are missing ... not used
@@ -56,6 +56,10 @@ class Recorder(object):
         self.write_timestamps = write_timestamps
         self.codec = 'divx'
         self.video_writer_list = []
+        if STREAM_CAMERA:
+            self.streamer = VideoStreamer(frame_rate=10)
+        else:
+            self.streamer = None
         self.is_recording = False
         self.is_viewing = False
         self.cams_context = None
@@ -777,13 +781,14 @@ class Recorder(object):
                                                           codec=self.codec))  # was DIVX
         # self.log.debug(print(self.cams_context))
         self.stop_event = stop_event
-
+        self.streamer.start()
         self.multi_record_thread = Thread(target=self.multi_cam_record)
         self.multi_record_thread.start()
         self.is_recording = True
 
     def stop_multi_cam_record(self):
         self.log.debug('Stopping recording, waiting for join')
+        self.streamer.stop()
         self.multi_record_thread.join()
         self.log.debug('thread joined,waiting for writers to finish')
         for writer in self.video_writer_list:
@@ -819,6 +824,8 @@ class Recorder(object):
                         self.video_writer_list[context_id].feed((img, img_nr_camera, img_nr, img_ts))
                     else:
                         self.video_writer_list[context_id].feed(img)
+                        if self.streamer and context_id == STREAMING_CAM:
+                            self.streamer.feed(img)
                     self.multi_view_queue[context_id].put_nowait(img)
                     # weirdly enough the recording does not mix up frames.. so maybe mixing up happens later ? in the queue
                     # or at the visualization ?

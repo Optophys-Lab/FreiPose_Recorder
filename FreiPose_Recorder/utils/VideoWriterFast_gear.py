@@ -155,3 +155,56 @@ if __name__ == '__main__':
     print('time passed', time.time() - start)
     writer.stop()
     print('finished')
+
+
+class VideoStreamer:
+    def __init__(self, frame_rate=10, queue_size=128):
+        self.frame_rate = frame_rate
+        # describe a suitable manifest-file location/name
+        self.streamer = None
+        self.is_streaming = False
+        self.queue_size = queue_size
+        self.Q = Queue(maxsize=queue_size)
+        self.stop_event = Event()
+        # intialize thread
+        self.thread = Thread(target=self.update, args=())
+        #self.thread.daemon = True
+
+    def start(self):
+        stream_params = {"-input_framerate": self.frame_rate, "-livestream": True}
+        if self.streamer is None:
+            self.streamer = StreamGear(output="dash_out.mpd", **stream_params)
+            self.is_streaming = True
+            self.thread.start()
+
+    def update(self):
+        # keep looping infinitely
+        while not self.stop_event.is_set():
+            # otherwise, ensure the there is something in the queue and the stream was initialized
+            if self.Q.qsize() > 0 and self.streamer is not None:
+                # get the next frame from the queue
+                frame = self.Q.get()
+                try:
+                    self.streamer.stream(frame)
+                except ValueError as e:
+                    self.stop_event.set()
+                    print("Error writing frame to stream: {}".format(e))
+            else:
+                time.sleep(0.001)  # Rest for 10ms, we have an empty queue
+        self.streamer.terminate()
+
+    def feed(self, frame):
+        if self.is_streaming:
+            if not self.Q.full():
+                return self.Q.put(frame)
+            else:
+                #self.stop_event.set()
+                self.stop()
+                raise QueueOverflow
+
+    def stop(self):
+        # safely close streamer
+        self.stop_event.set()
+        self.thread.join()
+        self.streamer = None
+        self.is_streaming = False
