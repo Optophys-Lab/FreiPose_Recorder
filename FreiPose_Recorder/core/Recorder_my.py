@@ -14,13 +14,13 @@ from pypylon import pylon
 # from utils.general_util import my_mkdir
 # from utils.VideoWriterFast import VideoWriterFast
 
-from FreiPose_Recorder.utils.VideoWriterFast_gear import VideoWriterFast
+from FreiPose_Recorder.utils.VideoWriterFast_gear import VideoWriterFast, VideoStreamer
 from FreiPose_Recorder.utils.VideoWriterFast_gear import QueueOverflow
 # from utils.StitchedImage import StitchedImage  # this is way to slow for real-time application
 
 from FreiPose_Recorder.configs.camera_enums import CameraIdentificationSN
 
-from FreiPose_Recorder.params import TIME_STAMP_STRING, TRIGGER_LINE_IN, TRIGGER_LINE_OUT, MAX_FPS, STREAM_CAMERA
+from FreiPose_Recorder.params import TIME_STAMP_STRING, TRIGGER_LINE_IN, TRIGGER_LINE_OUT, MAX_FPS, STREAM_CAMERA, STREAMING_CAM
 
 
 # Another way to get warnings when images are missing ... not used

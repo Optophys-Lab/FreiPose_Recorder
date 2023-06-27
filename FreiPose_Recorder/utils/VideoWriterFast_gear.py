@@ -1,8 +1,8 @@
 # import the necessary packages
 import json
-from threading import Thread
+from threading import Thread, Event
 import time
-from vidgear.gears import WriteGear
+from vidgear.gears import WriteGear, StreamGear
 from queue import Queue
 
 class QueueOverflow(Exception):
@@ -171,7 +171,7 @@ class VideoStreamer:
         #self.thread.daemon = True
 
     def start(self):
-        stream_params = {"-input_framerate": self.frame_rate, "-livestream": True}
+        stream_params = {"-input_framerate": self.frame_rate, "-livestream": True, "-extra_window_size":1, "-window_size":1}
         if self.streamer is None:
             self.streamer = StreamGear(output="dash_out.mpd", **stream_params)
             self.is_streaming = True
