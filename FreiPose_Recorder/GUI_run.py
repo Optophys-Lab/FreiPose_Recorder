@@ -100,8 +100,7 @@ class BASLER_GUI(QMainWindow):
         else:
             self.trigger = None
 
-        #need to connect beforehand
-        self.load_settings('default_settings.settings.json')
+
 
     ### Device Connectivity ####
     def scan_cams(self):
@@ -150,6 +149,9 @@ class BASLER_GUI(QMainWindow):
         if ENABLE_REMOTE:
             self.RemoteModeButton.setEnabled(True)
         self.ConnectButton.setEnabled(False)
+
+        # need to connect beforehand
+        self.load_settings('default_settings.settings.json')
 
     def run_cams(self):
         self.stop_event = Event()
@@ -463,7 +465,7 @@ class BASLER_GUI(QMainWindow):
         with open(file, 'r') as fi:
             cam_lib = json.load(fi)
 
-        for cam in self.basler_recorder.cam_array:
+        for c_id,cam in enumerate(self.basler_recorder.cam_array):
             try:
                 settings = cam_lib[cam.DeviceInfo.GetUserDefinedName()]
             except KeyError:
@@ -471,7 +473,17 @@ class BASLER_GUI(QMainWindow):
                               f'with SN: {cam.DeviceInfo.GetSerialNumber()}')
                 continue
             self.basler_recorder.set_cam_settings(cam, settings)
+            self.CameraSettings2.exposure_spin_list[c_id].blockSignals(True)
+            self.CameraSettings2.gain_spin_list[c_id].blockSignals(True)
+            self.CameraSettings2.exposure_spin_list[c_id].setValue(settings['exp_time'])
+            self.CameraSettings2.gain_spin_list[c_id].setValue(settings['gain'])
+            self.CameraSettings2.color_mode_list[c_id].setCurrentText(settings['color_mode'])
+            self.CameraSettings2.exposure_spin_list[c_id].blockSignals(False)
+            self.CameraSettings2.gain_spin_list[c_id].blockSignals(False)
 
+            #TODO set values in the GUI !
+
+            #self.CameraSettings2.exposure_spin_list[]
         try:
             self.HWTrig_checkBox.setChecked(cam_lib['HW_trigg'])
             self.crf_spinBox.setValue(cam_lib['crf'])

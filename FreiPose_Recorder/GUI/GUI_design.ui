@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1211</width>
-    <height>1158</height>
+    <width>1589</width>
+    <height>1137</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -231,8 +231,8 @@ Devices</string>
    <widget class="QPushButton" name="AutoExposeButton">
     <property name="geometry">
      <rect>
-      <x>780</x>
-      <y>40</y>
+      <x>1130</x>
+      <y>60</y>
       <width>111</width>
       <height>24</height>
      </rect>
@@ -247,8 +247,8 @@ Devices</string>
    <widget class="QPushButton" name="AutoGainButton">
     <property name="geometry">
      <rect>
-      <x>780</x>
-      <y>70</y>
+      <x>1130</x>
+      <y>90</y>
       <width>111</width>
       <height>24</height>
      </rect>
@@ -263,8 +263,8 @@ Devices</string>
    <widget class="QPushButton" name="WhiteBalanceButton">
     <property name="geometry">
      <rect>
-      <x>780</x>
-      <y>100</y>
+      <x>1130</x>
+      <y>120</y>
       <width>111</width>
       <height>24</height>
      </rect>
@@ -279,8 +279,8 @@ Devices</string>
    <widget class="QCheckBox" name="All_cams_checkBox">
     <property name="geometry">
      <rect>
-      <x>800</x>
-      <y>10</y>
+      <x>1150</x>
+      <y>30</y>
       <width>75</width>
       <height>20</height>
      </rect>
@@ -295,8 +295,8 @@ Devices</string>
    <widget class="QPushButton" name="FlipXButton">
     <property name="geometry">
      <rect>
-      <x>780</x>
-      <y>140</y>
+      <x>1130</x>
+      <y>160</y>
       <width>111</width>
       <height>24</height>
      </rect>
@@ -311,8 +311,8 @@ Devices</string>
    <widget class="QPushButton" name="FlipYButton">
     <property name="geometry">
      <rect>
-      <x>780</x>
-      <y>170</y>
+      <x>1130</x>
+      <y>190</y>
       <width>111</width>
       <height>24</height>
      </rect>
@@ -327,8 +327,8 @@ Devices</string>
    <widget class="QPushButton" name="ShowSingleCamButton">
     <property name="geometry">
      <rect>
-      <x>780</x>
-      <y>210</y>
+      <x>1130</x>
+      <y>230</y>
       <width>111</width>
       <height>51</height>
      </rect>
@@ -362,8 +362,8 @@ Devices</string>
    <widget class="QCheckBox" name="DisableViz_checkBox">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>300</y>
+      <x>740</x>
+      <y>220</y>
       <width>181</width>
       <height>20</height>
      </rect>
@@ -379,9 +379,9 @@ Devices</string>
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>330</y>
-      <width>1191</width>
-      <height>781</height>
+      <y>340</y>
+      <width>1571</width>
+      <height>771</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -397,8 +397,8 @@ Devices</string>
     </property>
     <property name="geometry">
      <rect>
-      <x>200</x>
-      <y>293</y>
+      <x>750</x>
+      <y>110</y>
       <width>191</width>
       <height>31</height>
      </rect>
@@ -410,7 +410,7 @@ Devices</string>
    <widget class="CameraSettingsTab" name="CameraSettings2" native="true">
     <property name="geometry">
      <rect>
-      <x>900</x>
+      <x>1280</x>
       <y>0</y>
       <width>301</width>
       <height>331</height>
@@ -645,8 +645,8 @@ REMOTE mode</string>
    <widget class="QLabel" name="Rec_status">
     <property name="geometry">
      <rect>
-      <x>590</x>
-      <y>270</y>
+      <x>170</x>
+      <y>200</y>
       <width>71</width>
       <height>51</height>
      </rect>
@@ -711,8 +711,8 @@ REMOTE mode</string>
    <widget class="QLabel" name="recording_duration_label">
     <property name="geometry">
      <rect>
-      <x>670</x>
-      <y>290</y>
+      <x>260</x>
+      <y>220</y>
       <width>91</width>
       <height>17</height>
      </rect>
