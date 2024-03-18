@@ -78,7 +78,7 @@ class VideoWriterFast:
 
     def feed(self, frame):
         if self.stream is None:
-            output_params = {"-input_framerate": self.fps, "-vcodec": self.codec, "-crf": self.crf}
+            output_params = {"-input_framerate": self.fps, "-vcodec": self.codec, "-crf": self.crf,"-pix_fmt":"bayer_rggb8"}
             #output_params = {"-input_framerate": self.fps, "-vcodec": "h264_nvenc", "-crf": 0}
             #output_params = {"-vcodec": "libx264", "-crf": 0, "-preset": "fast"}
             self.stream = WriteGear(output=self.video_path, **output_params)
