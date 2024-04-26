@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>FreiPose_Recorder &#8212; FreiPoseRecorder 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=def86cc0" />
+    
+    <script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API reference" href="api.html" />
+    <link rel="prev" title="Welcome to FreiPoseRecorder’s documentation!" href="index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="api.html" title="API reference"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to FreiPoseRecorder’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">FreiPoseRecorder 1.0.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">FreiPose_Recorder</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="freipose-recorder">
+<h1>FreiPose_Recorder<a class="headerlink" href="#freipose-recorder" title="Link to this heading">¶</a></h1>
+<p>Based on RecordTool by Christian https://github.com/lmb-freiburg/RecordTool</p>
+<p>It allows to record synchronous video from a multi camera rig using Basler cameras and an Arduino or MCC-DAQ for trigger generation.
+It includes a GUI for visualization of video streams as well as changing camera settings.
+GUI can be used in remote mode and be controlled via TCP/IP.</p>
+<p>read the docs <a class="reference external" href="https://optophys-lab.github.io/FreiPose_Recorder/">https://optophys-lab.github.io/FreiPose_Recorder/</a></p>
+<section id="installation-guide">
+<h2>Installation guide<a class="headerlink" href="#installation-guide" title="Link to this heading">¶</a></h2>
+<p>Select and install suitable release of Pylon’s libraries from:
+<a class="reference external" href="https://www.baslerweb.com/de/downloads/downloads-software/#type=pylonsoftware">https://www.baslerweb.com/de/downloads/downloads-software/#type=pylonsoftware</a></p>
+<p>(Optional) Create and activate a conda environment</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>conda env create -n Recorder_env python=3.9
+conda activate Recorder_env
+</pre></div>
+</div>
+<p>Install the following python packages (preferably in a virtual environment):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/Optophys-Lab/FreiPose_Recorder.git
+cd FreiPose_Recorder
+pip install -e .
+</pre></div>
+</div>
+<p>To Run the GUI from the commandline:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#make sure conda env is activated
+#make sure $CWD is FreiPose_Recorder
+python GUI_run.py
+</pre></div>
+</div>
+</section>
+<section id="user-guide">
+<h2>User guide<a class="headerlink" href="#user-guide" title="Link to this heading">¶</a></h2>
+<section id="camera-names-optional">
+<h3>Camera names (optional)<a class="headerlink" href="#camera-names-optional" title="Link to this heading">¶</a></h3>
+<p>To more easily identify your cameras you can give them custom names.</p>
+<p>Cameras do not have to be manually added to the enums anymore. After first connection to the camera, the serial number is
+saved in the <em>cameras.json</em> top level file.
+This file is used to load the cameras on subsequent runs. Its a jsonized ditionary with SN as key and camera name and
+context as value. Context is an int which is used to identify the frames from each camera. Its being hashed from camera
+name to prevent duplicates.</p>
+<p>After first connection to the camera you can modify <em>cameras.json</em> to give your cameras unique names.</p>
+</section>
+<section id="general-config">
+<h3>general config<a class="headerlink" href="#general-config" title="Link to this heading">¶</a></h3>
+<p>Can be found in <em>configs/params.py</em> file. It contains the following fields:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ENABLE_REMOTE</span></code> Boolean to enable remote connection to control GUI via network. Set to False if not using this feature</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">USE_ARDUINO_TRIGGER</span></code> Boolean to use python board as trigger, requires serial connection to the board</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CALIB_DURATION</span></code> duration of the calibration in ms</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CALIB_WAIT</span></code>  waiting time before the calibration starts in ms</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SAVE_TIMESTAMPS</span></code> Boolean to save the timestamps of the frames</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TRIGGER_LINE_IN</span></code> Input-line on the GPIO cable for the camera for the trigger signal</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MAX_FPS</span></code>  maximum fps for the camera</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LOG2FILE</span></code> Boolean to log to a file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CONVERT2</span></code> Mono8 or RGB8 Colorformat for conversion</p></li>
+</ul>
+</section>
+<section id="camera-settings">
+<h3>Camera settings<a class="headerlink" href="#camera-settings" title="Link to this heading">¶</a></h3>
+<p>Camera settings are loaded from the <em>default.settings.json</em> file. Upon connection to the camera, the settings are loaded,
+if this file is not available dialog asks for any other settings files.</p>
+<p><em>default.settings.json</em> is an jsonized dictionary containing parameters for each camera (<em>exposure time</em>, <em>gain</em>, <em>colormode</em>,
+<em>white balance</em> values) and further general settings, such as <em>save path</em> for videos, preferred <em>fps</em>(recording and play fps
+for free-running mode and only play fps for trigger mode, there the recording fps is dictated by the trigger frequency),
+<em>codec</em> used for video encoding, <em>crf</em> defining the compression level(higher value - higher compression), and boolean
+to use <em>HW-triggermode</em>.</p>
+</section>
+<section id="start-the-recordtool">
+<h3>Start the RecordTool<a class="headerlink" href="#start-the-recordtool" title="Link to this heading">¶</a></h3>
+<p>from activated environment run:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>python GUI_run.py    
+</pre></div>
+</div>
+<p>Default settings to be loaded upon connection should be saved as FreiPose_Recorder/default_settings.settings.json</p>
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">FreiPose_Recorder</a><ul>
+<li><a class="reference internal" href="#installation-guide">Installation guide</a></li>
+<li><a class="reference internal" href="#user-guide">User guide</a><ul>
+<li><a class="reference internal" href="#camera-names-optional">Camera names (optional)</a></li>
+<li><a class="reference internal" href="#general-config">general config</a></li>
+<li><a class="reference internal" href="#camera-settings">Camera settings</a></li>
+<li><a class="reference internal" href="#start-the-recordtool">Start the RecordTool</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="index.html"
+                          title="previous chapter">Welcome to FreiPoseRecorder’s documentation!</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="api.html"
+                          title="next chapter">API reference</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/readme.md.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="api.html" title="API reference"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to FreiPoseRecorder’s documentation!"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">FreiPoseRecorder 1.0.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">FreiPose_Recorder</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2024, Artur Schneider (Optophysiology, Freiburg).
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.3.7.
+    </div>
+  </body>
+</html>
