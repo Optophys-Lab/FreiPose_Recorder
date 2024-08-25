@@ -15,5 +15,7 @@ setup(
                       "pypylon == 3.0.1",
                       "vidgear[core]",
                       "pyserial",
-                      "opencv-python"]
+                      "opencv-python"],
+    extras_require={
+            "DLC_live": ["deeplabcut-live"]}
 )
