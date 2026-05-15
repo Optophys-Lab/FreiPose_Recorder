@@ -1,0 +1,28 @@
+{
+    "top": {
+        "gain": 26.72999962886869,
+        "exp_time": 5000.0,
+        "flipX": false,
+        "flipY": false,
+        "color_mode": "Mono8"
+    },
+    "bodycam": {
+        "gain": 26.72999962886869,
+        "exp_time": 5000.0,
+        "flipX": false,
+        "flipY": false,
+        "color_mode": "Mono8"
+    },
+    "facecam": {
+        "gain": 26.72999962886869,
+        "exp_time": 5000.0,
+        "flipX": false,
+        "flipY": false,
+        "color_mode": "Mono8"
+    },
+    "save_path": "O:/archive/projects/2022_optoroborat/misc/ZoeDebug/TestRecordingsCamera",
+    "fps": 30,
+    "HW_trigg": true,
+    "codec": "h264_nvenc",
+    "crf": 40
+}

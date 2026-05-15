@@ -1,10 +1,22 @@
 {
     "0815-0000": {
         "name": "cam00",
-        "context": 12601146
+        "context": 12711686
     },
     "0815-0001": {
         "name": "cam01",
-        "context": 9417229
+        "context": 2542591
+    },
+    "40627030": {
+        "name": "top",
+        "context": 1493569
+    },
+    "40627033": {
+        "name": "bodycam",
+        "context": 11289884
+    },
+    "40627035": {
+        "name": "facecam",
+        "context": 15418950
     }
 }
