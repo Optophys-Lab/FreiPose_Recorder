@@ -1,5 +1,6 @@
-ENABLE_REMOTE = False  # Boolean to enable remote connection to control GUI via network
-HOST = "10.4.26.118"  # if connecting to remote, use the IP of the current machine
+ENABLE_REMOTE = True  # Boolean to enable remote connection to control GUI via network
+#HOST = "10.4.26.118"  # if connecting to remote, use the IP of the current machine
+HOST ="127.0.0.1" #works if freipose and master script are run from the same PC
 PORT = 8881  # port for the remote connection
 USE_ARDUINO_TRIGGER = True    # Boolean to enable the arduino trigger NOT IMPLEMENTED
 CALIB_DURATION = 30000  #False  duration of the calibration in ms
