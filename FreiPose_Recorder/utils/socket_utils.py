@@ -270,10 +270,17 @@ class SocketComm:
             if self.ssl_sock:
                 self.ssl_sock.close()
             self._ssl_sock.close()
-        if self.sock:
+        if self.sock: #client connection
             self.sock.close()
-        if self._sock:
+        if self._sock:  #socket
             self._sock.close()
+        self.connected = False
+
+    def close_client_socket(self):
+        """close only the client conn, keep socket open"""
+        if self.sock: #client connection
+            self.sock.close()
+            self.sock = None
         self.connected = False
 
     def read_json_message(self) -> dict:

@@ -22,7 +22,7 @@ print("Status:", response)
 
 sock.send_json_message({
     'type': 'start_rec',
-    'session_id': 'test_session_001',
+    'session_id': 'test_session_005',
     'setting_file': '',
     'frame_rate': FPS
 })

@@ -282,6 +282,7 @@ class BASLER_GUI(QMainWindow):
         # change the pixmap color to red
         self.Rec_status.setStyleSheet("background-color: rgb(255, 0, 0);")
 
+        self.recording_duration_label.setText("0s")
         self.rec_start_time = time.monotonic()
         # create a time that executes the trigger after 500 ms delay to make sure cameras are ready
         if self.trigger and use_hw_trigger:
@@ -809,6 +810,8 @@ class BASLER_GUI(QMainWindow):
                 self.stop_cams()
                 self.remote_message_timer.setInterval(500)
                 self.socket_comm.send_json_message(SocketMessage.respond_stop)
+                self.socket_comm.close_client_socket() #only close client conn
+                self.socket_comm.threaded_accept_connection() #sets to listen for new conn
 
             elif message['type'] == MessageType.poll_status.value:
                 if self.basler_recorder.is_recording:

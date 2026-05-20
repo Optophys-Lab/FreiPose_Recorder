@@ -65,7 +65,7 @@ class Recorder(object):
         self._rid = 0
         self.fps = 10
         self._trigger = None
-        self.grab_timeout = 10000  # in
+        self.grab_timeout = 2000 #timeout from start end end of recording to wait for trigger; reduced from 10000 ms
         self.internal_queue_size = 100  # Size of the QUEUE for transfering images between threads
 
         self.log = logging.getLogger('BaslerRecorder')
