@@ -688,7 +688,7 @@ class BASLER_GUI(QMainWindow):
             self.PingB.clicked.connect(self.pingPython)  #enable the ping function
 
     def remote_mode(self):
-        if not self.socket_comm.connected:
+        if not self.is_remote_ctr: #if we are not in remote mode
             self.socket_comm.threaded_accept_connection()
             remote_dialog = RemoteConnDialog(self.socket_comm, self)
             remote_dialog.exec()
@@ -731,6 +731,8 @@ class BASLER_GUI(QMainWindow):
         self.socket_comm.send_json_message(SocketMessage.status_ready)
 
     def exit_remote_mode(self):
+        self.is_remote_ctr = False
+        self.socket_comm.stop_waiting_for_connection() #stop waiting for background thread conn
         self.socket_comm.close_socket()
         self.Client_label.setText("disconnected")
         self.RemoteModeButton.setText("Enable\nREMOTE-mode")
@@ -738,7 +740,7 @@ class BASLER_GUI(QMainWindow):
         if self.remote_message_timer:
             self.remote_message_timer.stop()
             self.remote_message_timer = None
-        self.is_remote_ctr = False
+
 
         # enable all buttons
         self.RUNButton.setEnabled(True)
@@ -811,7 +813,8 @@ class BASLER_GUI(QMainWindow):
                 self.remote_message_timer.setInterval(500)
                 self.socket_comm.send_json_message(SocketMessage.respond_stop)
                 self.socket_comm.close_client_socket() #only close client conn
-                self.socket_comm.threaded_accept_connection() #sets to listen for new conn
+                if self.is_remote_ctr: #only if remote ctr is enabled
+                    self.socket_comm.threaded_accept_connection() #sets to listen for new conn
 
             elif message['type'] == MessageType.poll_status.value:
                 if self.basler_recorder.is_recording:
