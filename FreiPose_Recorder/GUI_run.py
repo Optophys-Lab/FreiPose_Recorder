@@ -85,6 +85,8 @@ class BASLER_GUI(QMainWindow):
         self.ConnectSignals()
         self.basler_recorder = Recorder(write_timestamps=SAVE_TIMESTAMPS)
         self.scan_cams()
+        if AUTO_CONNECT_CAMS:
+            self.connect_to_cams()
 
         if ENABLE_REMOTE:
             self.socket_comm = SocketComm(type='server', host=HOST, port=PORT)

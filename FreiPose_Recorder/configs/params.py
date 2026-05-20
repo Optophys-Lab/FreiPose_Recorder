@@ -3,6 +3,7 @@ ENABLE_REMOTE = True  # Boolean to enable remote connection to control GUI via n
 HOST ="127.0.0.1" #works if freipose and master script are run from the same PC
 PORT = 8881  # port for the remote connection
 USE_ARDUINO_TRIGGER = True    # Boolean to enable the arduino trigger NOT IMPLEMENTED
+AUTO_CONNECT_CAMS = True # automatically connect available cams on startup
 CALIB_DURATION = 30000  #False  duration of the calibration in ms
 CALIB_WAIT = 10000  # waiting time before the calibration starts in ms
 SAVE_TIMESTAMPS = True     # Boolean to save the timestamps of the frames
