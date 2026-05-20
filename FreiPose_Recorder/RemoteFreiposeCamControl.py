@@ -4,7 +4,9 @@ from utils.socket_utils import SocketComm, SocketMessage
 HOST = "127.0.0.1"
 PORT = 8881
 FPS = 30
-RECORDING_DURATION = 10  # seconds, for testing
+#RECORDING_DURATION = 4  # seconds, for testing
+
+
 
 sock = SocketComm('client', host=HOST, port=PORT)
 sock.create_socket()
@@ -19,10 +21,10 @@ sock.send_json_message({'type': 'status_poll'})
 time.sleep(1.0)
 response = sock.read_json_message()
 print("Status:", response)
-
+# Start recording
 sock.send_json_message({
     'type': 'start_rec',
-    'session_id': 'test_session_005',
+    'session_id': 'test_session_300',
     'setting_file': '',
     'frame_rate': FPS
 })
@@ -31,14 +33,15 @@ response = sock.read_json_message()
 print("Recording response:", response)
 
 # Wait for recording duration
-time.sleep(RECORDING_DURATION)
+#time.sleep(RECORDING_DURATION)
+input("Recording started...press Enter to stop")
 
+#Stop recording
 sock.send_json_message({'type': 'stop'})
 time.sleep(1.0)
 response = sock.read_json_message()
 print("Stop response:", response)
 
-sock.send_json_message({'type': 'disconnected'})
 time.sleep(0.5)
 sock.close_socket()
 print("Done")
