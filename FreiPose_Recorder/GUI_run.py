@@ -684,6 +684,7 @@ class BASLER_GUI(QMainWindow):
         if USE_ARDUINO_TRIGGER:
             self.ConnectB.clicked.connect(self.connect_to_pico)
             self.DisConnectB.clicked.connect(self.disconnect_from_pico)
+            self.PingB.clicked.connect(self.pingPython)  #enable the ping function
 
     def remote_mode(self):
         if not self.socket_comm.connected:

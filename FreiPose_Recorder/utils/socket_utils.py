@@ -5,6 +5,7 @@ import select
 import logging
 from enum import Enum
 import time
+import json
 
 
 class MessageType(Enum):
