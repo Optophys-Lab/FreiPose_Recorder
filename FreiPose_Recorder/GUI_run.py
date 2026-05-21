@@ -104,6 +104,9 @@ class BASLER_GUI(QMainWindow):
             self.scan_ports()
             self.trigger = QtPicoSerial(self)
             #raise NotImplementedError('Arduino trigger not implemented')
+            if AUTO_CONNECT_COM:  # automatic connect to default com
+                self.PortsCombo.setCurrentText(DEFAULT_COM_PORT)
+                self.connect_to_pico()
         else:
             self.trigger = None
             self.PortsCombo.deleteLater()
@@ -235,15 +238,11 @@ class BASLER_GUI(QMainWindow):
             self.RemoteModeButton.setEnabled(True)
         self.ConnectButton.setEnabled(False)
 
-        # need to connect beforehand
-        try:
-            self.load_settings('default_settings.settings.json')
-        except FileNotFoundError:
+        if AUTO_LOAD_SETTINGS: # load settings after cam connection (if auto load settings = true)
             try:
-                self.load_settings('default.settings.json')
+                self.load_settings(DEFAULT_SETTINGS_FILE)
             except FileNotFoundError:
-                self.log.warning('No default settings file found')
-
+                self.log.warning(f'Settings file {DEFAULT_SETTINGS_FILE} not found')
 
 
     def start_recording(self):
