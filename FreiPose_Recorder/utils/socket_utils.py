@@ -322,6 +322,8 @@ class SocketComm:
         The messge ist then decoded into dictionary
         returns: dict
         """
+        if self.sock is None:
+            return None
         try:
             message = self._recv_until(b'\n')
             if message == -1:

@@ -784,6 +784,14 @@ class BASLER_GUI(QMainWindow):
                 except (FileNotFoundError, KeyError):
                     self.log.error("passed settings file not found")
 
+                #overwrite default save path from master script if it exists
+                try:
+                    if message["save_path"]:
+                        self.log.debug(f"Setting save path to {message['save_path']}")
+                        self.set_save_path(message["save_path"])
+                except KeyError:
+                    pass
+
                 self.session_id = message["session_id"]
                 self.SessionIDlineEdit.setText(self.session_id)
                 try:
