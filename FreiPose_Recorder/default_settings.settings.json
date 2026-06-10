@@ -1,21 +1,21 @@
 {
     "top": {
-        "gain": 26.72999962886869,
-        "exp_time": 5000.0,
+        "gain": 33.699999922808324,
+        "exp_time": 3963.0,
         "flipX": false,
         "flipY": false,
         "color_mode": "Mono8"
     },
     "bodycam": {
-        "gain": 26.72999962886869,
-        "exp_time": 5000.0,
-        "flipX": false,
-        "flipY": false,
+        "gain": 37.69999955666792,
+        "exp_time": 4987.0,
+        "flipX": true,
+        "flipY": true,
         "color_mode": "Mono8"
     },
     "facecam": {
-        "gain": 26.72999962886869,
-        "exp_time": 5000.0,
+        "gain": 45.01000001231034,
+        "exp_time": 5975.0,
         "flipX": false,
         "flipY": false,
         "color_mode": "Mono8"

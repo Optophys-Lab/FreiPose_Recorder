@@ -24,7 +24,7 @@ print("Status:", response)
 # Start recording
 sock.send_json_message({
     'type': 'start_rec',
-    'session_id': 'test_session_300',
+    'session_id': 'headfixation_test_CC',
     'setting_file': '',
     'frame_rate': FPS
 })
