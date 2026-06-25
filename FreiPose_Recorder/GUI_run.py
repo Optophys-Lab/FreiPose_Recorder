@@ -868,15 +868,16 @@ class BASLER_GUI(QMainWindow):
                     self.log.info(f"Copying file {videowriter.video_path} to {Path(self.session_path) / VIDEO_FOLDER}")
 
                     try:
+                        mp4_src = Path(videowriter.video_path)
+                        txt_src = mp4_src.with_suffix('.txt')
                         if 'MusterMaus' in self.session_id:
-                            shutil.copyfile(videowriter.video_path,
-                                            Path(self.session_path) / Path(videowriter.video_path).name)
+                            dst_dir = Path(self.session_path)
                         else:
-                            if Path(self.session_path).exists():
-                                #if not (Path(self.session_path) / VIDEO_FOLDER).exists():
-                                (Path(self.session_path) / VIDEO_FOLDER).mkdir(exist_ok=True)
-                            shutil.copyfile(videowriter.video_path,
-                                            Path(self.session_path) / VIDEO_FOLDER / Path(videowriter.video_path).name)
+                            dst_dir = Path(self.session_path) / VIDEO_FOLDER
+                            dst_dir.mkdir(exist_ok=True)
+                        shutil.copyfile(mp4_src, dst_dir / mp4_src.name)
+                        if txt_src.exists():
+                            shutil.copyfile(txt_src, dst_dir / txt_src.name)
                     except (FileNotFoundError, IOError) as e:
                         self.socket_comm.send_json_message(SocketMessage.respond_copy_fail)
                         self.log.error(f"Error copying file {e}")
