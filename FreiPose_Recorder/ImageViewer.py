@@ -62,7 +62,6 @@ class MultiCameraViewer(QWidget):
             self.cam_viewers.append(widget)
             self.grid.addWidget(widget, i // step, i % step)
 
-        # make all rows and columns stretch equally
         for col in range(step):
             self.grid.setColumnStretch(col, 1)
         for row in range((self.num_cameras + step - 1) // step):
