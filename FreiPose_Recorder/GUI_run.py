@@ -68,6 +68,34 @@ class BASLER_GUI(QMainWindow):
 
         self.Codec_comboBox.addItems(codec_to_try)
 
+        # --- Compression summary table ---
+        from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel as _QLabel
+        from PyQt6.QtCore import Qt as _Qt
+
+        # Relabel the global section clearly
+        self._global_enc_note = _QLabel(
+            "📊 Per-camera compression (used on REC).\n"
+            "Global Codec/CRF above = default for all.\n"
+            "Override per camera in right panel →",
+            self.centralwidget)
+        self._global_enc_note.setGeometry(740, 40, 175, 52)
+        self._global_enc_note.setStyleSheet("color: #aaaaaa; font-size: 7pt;")
+        self._global_enc_note.setWordWrap(True)
+        self._global_enc_note.show()
+
+        # Summary table: one row per camera
+        self._enc_table = QTableWidget(0, 3, self.centralwidget)
+        self._enc_table.setHorizontalHeaderLabels(["Camera", "Codec", "CRF"])
+        self._enc_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self._enc_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self._enc_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self._enc_table.verticalHeader().setVisible(False)
+        self._enc_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self._enc_table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
+        self._enc_table.setGeometry(740, 95, 175, 145)
+        self._enc_table.setToolTip("Per-camera compression settings used on REC.")
+        self._enc_table.show()
+
         #Setting icons for some buttons for prettiness
         self.RUNButton.setIcon(QtGui.QIcon("GUI/icons/play.svg"))
         self.RECButton.setIcon(QtGui.QIcon("GUI/icons/record.svg"))
@@ -113,6 +141,32 @@ class BASLER_GUI(QMainWindow):
             self.ConnectB.deleteLater()
             self.PingB.deleteLater()
             self.DisConnectB.deleteLater()
+
+    def refresh_enc_table(self):
+        """Update the compression summary table from current per-camera settings."""
+        from PyQt6.QtWidgets import QTableWidgetItem
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtGui import QColor
+
+        n_cams = len(self.CameraSettings.codec_list)
+        self._enc_table.setRowCount(n_cams)
+        for i in range(n_cams):
+            cam_name = self.CameraSettings.itemText(i) or f"Camera {i}"
+            codec = self.CameraSettings.codec_list[i].currentText()
+            crf = str(self.CameraSettings.crf_list[i].value())
+
+            self._enc_table.setItem(i, 0, QTableWidgetItem(cam_name))
+            self._enc_table.setItem(i, 1, QTableWidgetItem(codec))
+            crf_item = QTableWidgetItem(crf)
+            # color-code CRF: green=low compression, yellow=medium, red=high
+            crf_val = int(crf)
+            if crf_val <= 10:
+                crf_item.setBackground(QColor(0, 180, 0, 80))
+            elif crf_val <= 28:
+                crf_item.setBackground(QColor(255, 200, 0, 80))
+            else:
+                crf_item.setBackground(QColor(220, 0, 0, 80))
+            self._enc_table.setItem(i, 2, crf_item)
 
     ### Serial connectivity ####
     def scan_ports(self):
@@ -210,7 +264,7 @@ class BASLER_GUI(QMainWindow):
         self.basler_recorder.connect_cams()
 
         for c_id, cam in enumerate(self.basler_recorder.cam_array):
-            self.CameraSettings.toolbox.setItemText(c_id, cam.DeviceInfo.GetUserDefinedName())
+            self.CameraSettings.setItemText(c_id, cam.DeviceInfo.GetUserDefinedName())
             self.CameraSettings.exposure_spin_list[c_id].blockSignals(True)  # block triggering of events
             self.CameraSettings.gain_spin_list[c_id].blockSignals(True)
             self.CameraSettings.color_mode_list[c_id].blockSignals(True)
@@ -229,8 +283,14 @@ class BASLER_GUI(QMainWindow):
             self.CameraSettings.exposure_spin_list[c_id].blockSignals(False)  # unblock triggering of events
             self.CameraSettings.gain_spin_list[c_id].blockSignals(False)
             self.CameraSettings.color_mode_list[c_id].blockSignals(False)
+            # populate per-camera codec dropdown with same options as global
+            self.CameraSettings.codec_list[c_id].clear()
+            self.CameraSettings.codec_list[c_id].addItems(codec_to_try)
+            self.CameraSettings.codec_list[c_id].setCurrentText(self.Codec_comboBox.currentText())
+            self.CameraSettings.crf_list[c_id].setValue(self.crf_spinBox.value())
 
-        self.CameraSettings.toolbox.setCurrentIndex(0)
+        self.refresh_enc_table()
+        self.CameraSettings.setCurrentIndex(0)
         self.RUNButton.setEnabled(True)
         self.RECButton.setEnabled(True)
         self.REC_calib_Button.setEnabled(True)
@@ -257,8 +317,16 @@ class BASLER_GUI(QMainWindow):
         self.number_cams = self.basler_recorder.cam_array.GetSize()
         use_hw_trigger = self.HWTrig_checkBox.isChecked()
 
+        # build per-camera codec/crf lists from the per-camera settings tabs
+        per_cam_codecs = [self.CameraSettings.codec_list[i].currentText()
+                          for i in range(self.number_cams)]
+        per_cam_crfs = [self.CameraSettings.crf_list[i].value()
+                        for i in range(self.number_cams)]
+
         self.basler_recorder.run_multi_cam_record(self.stop_event, filename=self.session_id,
-                                                  use_hw_trigger=use_hw_trigger)
+                                                  use_hw_trigger=use_hw_trigger,
+                                                  per_cam_codecs=per_cam_codecs,
+                                                  per_cam_crfs=per_cam_crfs)
 
         self.multi_view_timer = QTimer()
         self.multi_view_timer.timeout.connect(self.update_multi_view)
@@ -274,7 +342,7 @@ class BASLER_GUI(QMainWindow):
         self.WhiteBalanceButton.setEnabled(False)
         self.FlipXButton.setEnabled(False)
         self.FlipYButton.setEnabled(False)
-        self.CameraSettings.toolbox.setEnabled(False)
+        self.CameraSettings.setEnabled(False)
         self.All_cams_checkBox.setEnabled(False)
         self.SettingsSaveButton.setEnabled(False)
         self.SettingsLoadButton.setEnabled(False)
@@ -367,7 +435,7 @@ class BASLER_GUI(QMainWindow):
             self.WhiteBalanceButton.setEnabled(True)
             self.FlipXButton.setEnabled(True)
             self.FlipYButton.setEnabled(True)
-            self.CameraSettings.toolbox.setEnabled(True)
+            self.CameraSettings.setEnabled(True)
             self.All_cams_checkBox.setEnabled(True)
             self.SettingsSaveButton.setEnabled(True)
             self.SettingsLoadButton.setEnabled(True)
@@ -521,6 +589,14 @@ class BASLER_GUI(QMainWindow):
                           "HW_trigg": self.HWTrig_checkBox.isChecked(), 'codec': self.Codec_comboBox.currentText(),
                           "crf": self.crf_spinBox.value()})
 
+        # save per-camera codec/crf
+        nr_cams = self.basler_recorder.cam_array.GetSize()
+        for i, cam in enumerate(self.basler_recorder.cam_array):
+            cam_name = cam.DeviceInfo.GetUserDefinedName()
+            if cam_name in cam_lib:
+                cam_lib[cam_name]['codec'] = self.CameraSettings.codec_list[i].currentText()
+                cam_lib[cam_name]['crf'] = self.CameraSettings.crf_list[i].value()
+
         # open file dialog for where to save
         settings_file = QFileDialog.getSaveFileName(self, 'Save settings file', "",
                                                     "Settings files name (*.settings.json)")
@@ -572,6 +648,11 @@ class BASLER_GUI(QMainWindow):
             self.CameraSettings.exposure_spin_list[c_id].blockSignals(False)
             self.CameraSettings.gain_spin_list[c_id].blockSignals(False)
             self.CameraSettings.color_mode_list[c_id].blockSignals(False)
+            # load per-camera codec/crf if present
+            if 'codec' in settings:
+                self.CameraSettings.codec_list[c_id].setCurrentText(settings['codec'])
+            if 'crf' in settings:
+                self.CameraSettings.crf_list[c_id].setValue(settings['crf'])
 
         try:
             self.HWTrig_checkBox.setChecked(cam_lib['HW_trigg'])
@@ -579,9 +660,10 @@ class BASLER_GUI(QMainWindow):
             self.Codec_comboBox.setCurrentText(cam_lib['codec'])
             self.FrameRateSpin.setValue(cam_lib['fps'])
             self.set_save_path(cam_lib['save_path'])
-            #self.basler_recorder.save_path = cam_lib['save_path']
         except KeyError:
             self.log.info('No-full general settings found in file')
+
+        self.refresh_enc_table()
 
     def set_save_path(self, save_path: (str, Path, None) = None):
         """
@@ -597,7 +679,7 @@ class BASLER_GUI(QMainWindow):
     ## IMAGE CONTROL ####
     def get_current_tab(self) -> int:
         """Returns the ID of currently open tab"""
-        return self.CameraSettings.toolbox.currentIndex()
+        return self.CameraSettings.currentIndex()
 
     # those functions are now blocking ? maybe make sure they r not ? create threads for actual adjustments ?
     def auto_expose(self):

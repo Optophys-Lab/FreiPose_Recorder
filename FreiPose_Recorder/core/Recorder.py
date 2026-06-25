@@ -40,6 +40,7 @@ class Recorder(object):
     def __init__(self, verbosity=0, write_timestamps=False):
         self.write_timestamps = write_timestamps
         self.codec = 'divx'
+        self.crf = 0  # default CRF (0 = lossless for libx264; per-camera values override this)
         self.video_writer_list = []  # list of video writers
         self.is_recording = False
         self.is_viewing = False
@@ -806,9 +807,23 @@ class Recorder(object):
         self.cam_array.StopGrabbing()
         self.is_viewing = False
 
-    def run_multi_cam_record(self, stop_event: Event, filename: str = 'testrec', use_hw_trigger: bool = False):
+    def run_multi_cam_record(self, stop_event: Event, filename: str = 'testrec',
+                             use_hw_trigger: bool = False,
+                             per_cam_codecs: list = None,
+                             per_cam_crfs: list = None):
+        """
+        Start multi-camera recording.
+
+        Args:
+            stop_event:      threading.Event to stop recording
+            filename:        video filename prefix
+            use_hw_trigger:  use hardware trigger mode
+            per_cam_codecs:  list of codec strings, one per camera (falls back to self.codec)
+            per_cam_crfs:    list of CRF ints, one per camera (falls back to self.crf if set, else 0)
+        """
         was_closed = False
-        self.multi_view_queue = [Queue(self.internal_queue_size) for _ in range(self.cam_array.GetSize())]
+        n_cams = self.cam_array.GetSize()
+        self.multi_view_queue = [Queue(self.internal_queue_size) for _ in range(n_cams)]
 
         # create path if not exists
         (Path(self.save_path)).mkdir(parents=True, exist_ok=True)
@@ -817,8 +832,7 @@ class Recorder(object):
             was_closed = True
             self.cam_array.Open()
 
-        self.log.info(f'Recording {self.cam_array.GetSize()} cameras '
-                      f'with {self.fps} FPS')
+        self.log.info(f'Recording {n_cams} cameras with {self.fps} FPS')
 
         self.cams_context = {}
         self.video_writer_list = list()
@@ -826,6 +840,8 @@ class Recorder(object):
             timestamp = datetime.datetime.now().strftime(TIME_STAMP_STRING)
         except (TypeError, ValueError):
             timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        global_crf = getattr(self, 'crf', 0)
 
         # to make sure all have the same timestamp
         for c_id, cam in enumerate(self.cam_array):
@@ -835,12 +851,18 @@ class Recorder(object):
                 self._config_cams_continuous(cam)
 
             self.cams_context[cam.GetCameraContext()] = c_id
-            video_name = f"{filename}_{timestamp}_" \
-                         f"{cam.DeviceInfo.GetUserDefinedName()}.mp4"
+
+            # per-camera codec/crf with fallback to global values
+            codec = per_cam_codecs[c_id] if per_cam_codecs and c_id < len(per_cam_codecs) else self.codec
+            crf = per_cam_crfs[c_id] if per_cam_crfs and c_id < len(per_cam_crfs) else global_crf
+
+            video_name = f"{filename}_{timestamp}_{cam.DeviceInfo.GetUserDefinedName()}.mp4"
             video_name = (Path(self.save_path) / video_name).as_posix()
+            self.log.debug(f'Camera {c_id} ({cam.DeviceInfo.GetUserDefinedName()}): codec={codec}, crf={crf}')
             self.video_writer_list.append(VideoWriterFast(video_name,
                                                           fps=self.fps,
-                                                          codec=self.codec))  # was DIVX
+                                                          codec=codec,
+                                                          crf=crf))
         # self.log.debug(print(self.cams_context))
         self.stop_event = stop_event
         self.error_event.clear()

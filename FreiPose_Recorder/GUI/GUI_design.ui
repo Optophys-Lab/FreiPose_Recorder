@@ -231,7 +231,7 @@ Devices</string>
    <widget class="QPushButton" name="AutoExposeButton">
     <property name="geometry">
      <rect>
-      <x>1130</x>
+      <x>960</x>
       <y>60</y>
       <width>111</width>
       <height>24</height>
@@ -247,7 +247,7 @@ Devices</string>
    <widget class="QPushButton" name="AutoGainButton">
     <property name="geometry">
      <rect>
-      <x>1130</x>
+      <x>960</x>
       <y>90</y>
       <width>111</width>
       <height>24</height>
@@ -263,7 +263,7 @@ Devices</string>
    <widget class="QPushButton" name="WhiteBalanceButton">
     <property name="geometry">
      <rect>
-      <x>1130</x>
+      <x>960</x>
       <y>120</y>
       <width>111</width>
       <height>24</height>
@@ -279,9 +279,9 @@ Devices</string>
    <widget class="QCheckBox" name="All_cams_checkBox">
     <property name="geometry">
      <rect>
-      <x>1150</x>
+      <x>960</x>
       <y>30</y>
-      <width>75</width>
+      <width>100</width>
       <height>20</height>
      </rect>
     </property>
@@ -295,7 +295,7 @@ Devices</string>
    <widget class="QPushButton" name="FlipXButton">
     <property name="geometry">
      <rect>
-      <x>1130</x>
+      <x>960</x>
       <y>160</y>
       <width>111</width>
       <height>24</height>
@@ -311,7 +311,7 @@ Devices</string>
    <widget class="QPushButton" name="FlipYButton">
     <property name="geometry">
      <rect>
-      <x>1130</x>
+      <x>960</x>
       <y>190</y>
       <width>111</width>
       <height>24</height>
@@ -327,7 +327,7 @@ Devices</string>
    <widget class="QPushButton" name="ShowSingleCamButton">
     <property name="geometry">
      <rect>
-      <x>1130</x>
+      <x>960</x>
       <y>230</y>
       <width>111</width>
       <height>51</height>
@@ -363,7 +363,7 @@ Devices</string>
     <property name="geometry">
      <rect>
       <x>740</x>
-      <y>220</y>
+      <y>250</y>
       <width>181</width>
       <height>20</height>
      </rect>
@@ -394,9 +394,9 @@ Devices</string>
    <widget class="CameraSettingsTab" name="CameraSettings" native="true">
     <property name="geometry">
      <rect>
-      <x>1280</x>
+      <x>1100</x>
       <y>0</y>
-      <width>301</width>
+      <width>489</width>
       <height>331</height>
      </rect>
     </property>

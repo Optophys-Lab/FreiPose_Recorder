@@ -4,7 +4,7 @@ import pyqtgraph as pg
 from pyqtgraph import ImageView, RawImageWidget, GraphicsView, ImageItem, GraphicsWidget, PlotWidget
 from datetime import datetime
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QDialog, QSizePolicy, \
-    QGridLayout, QToolBox,  QDoubleSpinBox, QComboBox, QLabel
+    QGridLayout, QToolBox, QDoubleSpinBox, QComboBox, QLabel, QSpinBox, QScrollArea
 from PyQt6 import uic, QtCore, QtGui, QtWidgets
 import numpy as np
 
@@ -164,50 +164,65 @@ class SingleCameraSettings(QWidget):
     def __init__(self, parent=None, name='Camera'):
         super(SingleCameraSettings, self).__init__(parent)
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setContentsMargins(4, 4, 4, 4)
+        self.layout.setSpacing(4)
 
         font = QtGui.QFont()
         font.setPointSize(9)
 
-        self.exp_label = QLabel(self)
-        self.exp_label.setText("Exposure Time")
+        # Exposure Time
         self.ExposureTime_spin = QDoubleSpinBox(self)
         self.ExposureTime_spin.setSuffix(" us")
         self.ExposureTime_spin.setMinimum(0.5)
         self.ExposureTime_spin.setMaximum(1000000.0)
         self.ExposureTime_spin.setSingleStep(0.5)
-        self.ExposureTime_spin.setProperty("value", 5.0)
-        self.layout.addWidget(self.exp_label)
-        self.layout.addWidget(self.ExposureTime_spin)
+        self.ExposureTime_spin.setValue(5.0)
         hbox = QHBoxLayout()
-        hbox.addWidget(self.exp_label)
+        hbox.addWidget(QLabel("Exposure Time", self))
         hbox.addWidget(self.ExposureTime_spin)
         self.layout.addLayout(hbox)
 
-
-        self.gain_label = QLabel(self)
-        self.gain_label.setText("Gain")
+        # Gain
         self.Gain_spin = QDoubleSpinBox(self)
         self.Gain_spin.setMinimum(0.0)
         self.Gain_spin.setMaximum(48.0)
         self.Gain_spin.setSingleStep(0.1)
-        self.Gain_spin.setProperty("value", 0.0)
+        self.Gain_spin.setValue(0.0)
         hbox = QHBoxLayout()
-        hbox.addWidget(self.gain_label)
+        hbox.addWidget(QLabel("Gain", self))
         hbox.addWidget(self.Gain_spin)
         self.layout.addLayout(hbox)
-        #self.layout.addWidget(self.Gain_spin)
 
-        self.colorlabel = QLabel(self)
-        self.colorlabel.setText("Color mode")
+        # Color mode
         self.ColorMode_comboBox = QComboBox(self)
-        self.layout.addWidget(self.colorlabel)
-        self.layout.addWidget(self.ColorMode_comboBox)
+        hbox = QHBoxLayout()
+        hbox.addWidget(QLabel("Color mode", self))
+        hbox.addWidget(self.ColorMode_comboBox)
+        self.layout.addLayout(hbox)
 
+        # Codec
+        self.Codec_comboBox = QComboBox(self)
+        hbox = QHBoxLayout()
+        hbox.addWidget(QLabel("Codec", self))
+        hbox.addWidget(self.Codec_comboBox)
+        self.layout.addLayout(hbox)
+
+        # CRF
+        self.CRF_spinBox = QSpinBox(self)
+        self.CRF_spinBox.setMinimum(0)
+        self.CRF_spinBox.setMaximum(51)
+        self.CRF_spinBox.setValue(0)
+        self.CRF_spinBox.setToolTip("0 = lossless, 51 = max compression (libx264)")
+        hbox = QHBoxLayout()
+        hbox.addWidget(QLabel("CRF (compression)", self))
+        hbox.addWidget(self.CRF_spinBox)
+        self.layout.addLayout(hbox)
+
+        self.layout.addStretch()
         self.setLayout(self.layout)
         self.setFont(font)
-        self.show()
-    def set_colormodes(self, colormodes:list):
+
+    def set_colormodes(self, colormodes: list):
         self.ColorMode_comboBox.clear()
         self.ColorMode_comboBox.addItems(colormodes)
 
@@ -220,10 +235,13 @@ class CameraSettingsTab(QWidget):
         self.parent = parent
         self._num_cameras = nr_cams
         self.cam_settings = []
-        #self.log.debug('CameraTab created')
         self.gain_spin_list = []
         self.exposure_spin_list = []
         self.color_mode_list = []
+        self.codec_list = []
+        self.crf_list = []
+        self._cam_setting_widgets = []  # SingleCameraSettings instances
+        self._popup = None             # floating popup panel
 
         self.init_ui()
         self.ConnectSignals()
@@ -236,52 +254,216 @@ class CameraSettingsTab(QWidget):
     def num_cameras(self, value):
         if 0 < value <= 9:
             self._num_cameras = value
-
         else:
             self._num_cameras = 9
         self.change_ui()
 
     def init_ui(self):
+        from PyQt6.QtWidgets import QPushButton, QFrame
         font = QtGui.QFont()
         font.setPointSize(9)
-        self.layout= QVBoxLayout(self)
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(2, 2, 2, 2)
+        self.layout.setSpacing(2)
         self.setLayout(self.layout)
-        self.toolbox = QToolBox()
+
+        # Instruction label
+        self._hint_label = QLabel(
+            "📷 Select a camera below to set its individual\n"
+            "exposure, gain, codec and compression (CRF).")
+        hint_font = QtGui.QFont()
+        hint_font.setPointSize(8)
+        hint_font.setItalic(True)
+        self._hint_label.setFont(hint_font)
+        self._hint_label.setStyleSheet("color: #aaaaaa; padding: 2px 4px;")
+        self._hint_label.setWordWrap(True)
+        self.layout.addWidget(self._hint_label)
+
+        self._buttons = []
+        self._cam_setting_widgets = []
 
         for i in range(self.num_cameras):
+            btn = QPushButton(f'Camera {i}')
+            btn.setCheckable(True)
+            btn.setFixedHeight(22)
+            btn.setStyleSheet(
+                "QPushButton { text-align: left; padding-left: 6px; }"
+                "QPushButton:checked { background-color: #3a5a8a; }"
+            )
+            btn.clicked.connect(lambda checked, idx=i: self._on_cam_button(idx))
+            self.layout.addWidget(btn)
+            self._buttons.append(btn)
+
             cam_sett = SingleCameraSettings(self)
-            self.toolbox.insertItem(i, cam_sett, f'Camera {i}')
+            self._cam_setting_widgets.append(cam_sett)
             self.gain_spin_list.append(cam_sett.Gain_spin)
             self.exposure_spin_list.append(cam_sett.ExposureTime_spin)
             self.color_mode_list.append(cam_sett.ColorMode_comboBox)
-        self.layout.addWidget(self.toolbox)
+            self.codec_list.append(cam_sett.Codec_comboBox)
+            self.crf_list.append(cam_sett.CRF_spinBox)
+
+        self.layout.addStretch()
         self.setFont(font)
         self.show()
 
+        # Build the floating popup once
+        self._build_popup()
+
+    def _build_popup(self):
+        """Create a floating frameless panel that shows settings for the selected camera."""
+        from PyQt6.QtWidgets import QFrame, QStackedWidget
+        from PyQt6.QtCore import Qt
+
+        # Tool window: always on top, dropdowns can escape its bounds
+        top = self.window()
+        self._popup = QFrame(top, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
+        self._popup.setFrameShape(QFrame.Shape.StyledPanel)
+        self._popup.setFrameShadow(QFrame.Shadow.Raised)
+        self._popup.setStyleSheet(
+            "QFrame { background-color: #2b2b2b; border: 1px solid #555; border-radius: 4px; }"
+        )
+        self._popup.setFixedWidth(320)
+
+        pop_layout = QVBoxLayout(self._popup)
+        pop_layout.setContentsMargins(6, 6, 6, 6)
+        pop_layout.setSpacing(4)
+
+        self._popup_title = QLabel("Camera settings")
+        title_font = QtGui.QFont()
+        title_font.setBold(True)
+        title_font.setPointSize(9)
+        self._popup_title.setFont(title_font)
+        pop_layout.addWidget(self._popup_title)
+
+        self._stack = QStackedWidget()
+        for cam_sett in self._cam_setting_widgets:
+            scroll = QScrollArea()
+            scroll.setWidget(cam_sett)
+            scroll.setWidgetResizable(True)
+            scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+            self._stack.addWidget(scroll)
+
+        pop_layout.addWidget(self._stack)
+        self._popup.setLayout(pop_layout)
+        self._popup.hide()
+
+    def _on_cam_button(self, idx):
+        """Show popup next to the clicked button, or hide if same button clicked again."""
+        btn = self._buttons[idx]
+
+        # uncheck all other buttons
+        for i, b in enumerate(self._buttons):
+            if i != idx:
+                b.setChecked(False)
+
+        if not btn.isChecked():
+            self._popup.hide()
+            return
+
+        # position popup to the left of this widget using global coords
+        self._stack.setCurrentIndex(idx)
+        self._popup_title.setText(f"⚙ {btn.text()} — Settings")
+        self._popup.setFixedHeight(200)
+
+        global_pos = btn.mapToGlobal(btn.rect().topLeft())
+        popup_x = global_pos.x() - self._popup.width() - 5
+        popup_y = global_pos.y()
+
+        # Keep within screen bounds
+        from PyQt6.QtWidgets import QApplication
+        screen = QApplication.primaryScreen().availableGeometry()
+        if popup_x < screen.x():
+            popup_x = global_pos.x() + btn.width() + 5
+        if popup_y + self._popup.height() > screen.bottom():
+            popup_y = screen.bottom() - self._popup.height()
+
+        self._popup.move(popup_x, popup_y)
+        self._popup.raise_()
+        self._popup.show()
+
+    def currentIndex(self):
+        return self._stack.currentIndex() if self._stack else 0
+
+    def setCurrentIndex(self, idx):
+        if self._stack:
+            self._stack.setCurrentIndex(idx)
+
+    def itemText(self, idx):
+        if 0 <= idx < len(self._buttons):
+            return self._buttons[idx].text()
+        return f'Camera {idx}'
+
+    def setItemText(self, idx, text):
+        if 0 <= idx < len(self._buttons):
+            self._buttons[idx].setText(text)
+            if self._stack and self._popup_title:
+                if self._stack.currentIndex() == idx:
+                    self._popup_title.setText(f"⚙ {text} — Settings")
+
+    # Provide toolbox-compatible interface used by GUI_run.py
+    @property
+    def toolbox(self):
+        return self
+
     def change_ui(self):
-        self.layout.removeWidget(self.toolbox)
+        # Clear existing buttons and widgets
+        for btn in self._buttons:
+            self.layout.removeWidget(btn)
+            btn.deleteLater()
+        self._buttons = []
         self.gain_spin_list = []
         self.exposure_spin_list = []
         self.color_mode_list = []
+        self.codec_list = []
+        self.crf_list = []
+        self._cam_setting_widgets = []
 
-        self.toolbox = QToolBox()
+        if self._popup:
+            self._popup.hide()
+
+        from PyQt6.QtWidgets import QPushButton
+        # Remove stretch
+        item = self.layout.takeAt(self.layout.count() - 1)
+
         for i in range(self.num_cameras):
+            btn = QPushButton(f'Camera {i}')
+            btn.setCheckable(True)
+            btn.setFixedHeight(22)
+            btn.setStyleSheet(
+                "QPushButton { text-align: left; padding-left: 6px; }"
+                "QPushButton:checked { background-color: #3a5a8a; }"
+            )
+            btn.clicked.connect(lambda checked, idx=i: self._on_cam_button(idx))
+            self.layout.addWidget(btn)
+            self._buttons.append(btn)
+
             cam_sett = SingleCameraSettings(self)
-            self.toolbox.insertItem(i, cam_sett, f'Camera {i}')
+            self._cam_setting_widgets.append(cam_sett)
             self.gain_spin_list.append(cam_sett.Gain_spin)
             self.exposure_spin_list.append(cam_sett.ExposureTime_spin)
             self.color_mode_list.append(cam_sett.ColorMode_comboBox)
-        self.layout.addWidget(self.toolbox)
-        self.ConnectSignals()  # reconnect with new widgets
+            self.codec_list.append(cam_sett.Codec_comboBox)
+            self.crf_list.append(cam_sett.CRF_spinBox)
+
+        self.layout.addStretch()
+
+        # Rebuild popup stack
+        if self._popup:
+            self._popup.deleteLater()
+        self._build_popup()
+        self.ConnectSignals()
 
     def parent_gain_exposure(self):
-        self.parent.parent().set_gain_exposure()  #because of the promoted parent widget
+        self.parent.parent().set_gain_exposure()
 
     def parent_color_mode(self, color_mode: str):
-        """
-        Set the color mode of the camera, as callback to changes in UI
-        """
         self.parent.parent().set_color_mode(color_mode)
+
+    def parent_refresh_enc_table(self):
+        try:
+            self.parent.parent().refresh_enc_table()
+        except AttributeError:
+            pass
 
     def ConnectSignals(self):
         for spinbox in self.exposure_spin_list:
@@ -290,6 +472,11 @@ class CameraSettingsTab(QWidget):
             spinbox.valueChanged.connect(self.parent_gain_exposure)
         for spinbox in self.color_mode_list:
             spinbox.currentTextChanged.connect(self.parent_color_mode)
+        for combo in self.codec_list:
+            combo.currentTextChanged.connect(self.parent_refresh_enc_table)
+        for spinbox in self.crf_list:
+            spinbox.valueChanged.connect(self.parent_refresh_enc_table)
+
 
 
 class RemoteConnDialog(QtWidgets.QDialog):
