@@ -37,39 +37,55 @@ class MultiCameraViewer(QWidget):
             self._num_cameras = 9
         self.change_ui()
 
+    @staticmethod
+    def _get_grid_step(num_cameras):
+        """Return number of columns for the camera grid layout."""
+        if num_cameras == 1:
+            return 1
+        elif num_cameras <= 3:
+            return num_cameras  # 1 row: 1x2 or 1x3
+        elif num_cameras <= 4:
+            return 2            # 2x2
+        else:
+            return 3            # 3x3
+
     def init_ui(self):
         # create a grid layout to hold the camera views
         self.grid = QGridLayout()
-
-        # self.grid.setSpacing(-50)
-        # self.grid.setContentsMargins(0, 0, 0, 0)
+        self.grid.setSpacing(2)
+        self.grid.setContentsMargins(2, 2, 2, 2)
         self.setLayout(self.grid)
 
-        # create a RawImageWidget for each camera and add it to the layout
-        if self.num_cameras <= 4:
-            step = 2
-        else:
-            step = 3
+        step = self._get_grid_step(self.num_cameras)
         for i in range(self.num_cameras):
             widget = ImageView_camera(self.parent)
             self.cam_viewers.append(widget)
             self.grid.addWidget(widget, i // step, i % step)
 
+        # make all rows and columns stretch equally
+        for col in range(step):
+            self.grid.setColumnStretch(col, 1)
+        for row in range((self.num_cameras + step - 1) // step):
+            self.grid.setRowStretch(row, 1)
+
         self.show()
-        self.grid.setSpacing(0)
 
     def change_ui(self):
         for view in self.cam_viewers:
             self.grid.removeWidget(view)
+            view.deleteLater()
         self.cam_viewers = []
-        if self.num_cameras <= 4:
-            step = 2
-        else:
-            step = 3
+
+        step = self._get_grid_step(self.num_cameras)
         for i in range(self.num_cameras):
             widget = ImageView_camera(self.parent)
             self.cam_viewers.append(widget)
             self.grid.addWidget(widget, i // step, i % step)
+
+        for col in range(step):
+            self.grid.setColumnStretch(col, 1)
+        for row in range((self.num_cameras + step - 1) // step):
+            self.grid.setRowStretch(row, 1)
 
 
 class ImageView_camera(QWidget):
