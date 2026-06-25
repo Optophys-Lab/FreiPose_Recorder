@@ -764,7 +764,11 @@ class BASLER_GUI(QMainWindow):
         self.SessionIDlineEdit.setText("")
 
     def check_and_parse_messages(self):
-        message = self.socket_comm.read_json_message_fast_linebreak()
+        try:
+            message = self.socket_comm.read_json_message_fast_linebreak()
+        except Exception as e:
+            self.log.warning(f"Socket read error in check_and_parse_messages: {e}")
+            return
         if message:
             # parse message
             if message['type'] == MessageType.start_video_rec.value \

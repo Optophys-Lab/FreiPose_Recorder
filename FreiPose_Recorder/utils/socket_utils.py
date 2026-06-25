@@ -378,7 +378,7 @@ class SocketComm:
                     data += self.sock.recv(1)
         except socket.timeout:
             data = None
-        except ConnectionResetError:
+        except (ConnectionResetError, ConnectionAbortedError, OSError):
             self.log.warning("Client disconnected")
             data = -1
         return data
