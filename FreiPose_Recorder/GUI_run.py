@@ -856,8 +856,13 @@ class BASLER_GUI(QMainWindow):
     def purge_recorded_file(self):
         for videowriter in self.basler_recorder.video_writer_list:
             if videowriter.stopped:
-                self.log.info(f"Deleting file {videowriter.video_path}")
-                Path(videowriter.video_path).unlink()
+                mp4_path = Path(videowriter.video_path)
+                txt_path = mp4_path.with_suffix('.txt')
+                self.log.info(f"Deleting file {mp4_path}")
+                mp4_path.unlink()
+                if txt_path.exists():
+                    self.log.info(f"Deleting file {txt_path}")
+                    txt_path.unlink()
             else:
                 self.log.info(f"Cant delete file {videowriter.video_path} as recorder hasnt finished yet")
 
