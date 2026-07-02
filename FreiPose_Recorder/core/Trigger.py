@@ -10,7 +10,7 @@ class TriggerArduino:
 
         # arduino commands
         self._ping_cmd = b'P\r'
-        self._start_cmd = b'S%d\r'
+        self._start_cmd = b'S%d\n'
         self._stop_cmd = b'Q\r'
         self._send_string_cmd =b'T%s\r'
         

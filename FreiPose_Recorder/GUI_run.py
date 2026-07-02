@@ -448,7 +448,7 @@ class BASLER_GUI(QMainWindow):
             self.trigger.fps = self.FrameRateSpin.value()
             self.trigger_timer = QTimer()
             self.trigger_timer.setSingleShot(True)
-            self.trigger_timer.timeout.connect(self.trigger.start)
+            self.trigger_timer.timeout.connect(self.trigger.start_trigger)
             self.trigger_timer.start(500)
 
     def update_multi_view(self):
