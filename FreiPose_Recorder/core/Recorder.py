@@ -167,7 +167,7 @@ class Recorder(object):
             cam.AcquisitionFrameRate.Value = MAX_FPS  # here we go to max fps in order to not be limited
         except genicam.LogicalErrorException:
             cam.AcquisitionFrameRateAbs.Value = MAX_FPS  # maybe basler 2 cameras ?
-        cam.AcquisitionFrameRateEnable.Value = True  # TODO should this be False ?
+        cam.AcquisitionFrameRateEnable.Value = False  # disable software rate cap; HW trigger controls rate
         # behavior wrt to these values is a bit strange to me. Important seems to be to use LastImages Strategy and make MaxNumBuffers larger than OutputQueueSize. Otherwise its not guaranteed to work
         cam.MaxNumBuffer.SetValue(1024)  # how many buffers there are in total (empty and full)
         cam.OutputQueueSize.SetValue(
