@@ -163,11 +163,17 @@ class Recorder(object):
     def _config_cams_hw_trigger(self, cam):
         if not cam.IsOpen():
             cam.Open()
+        # Set rate limiter just above the actual trigger rate to debounce TTL ringing.
+        # Ringing produces a spurious second edge ~16-18ms after each real trigger.
+        # A cap at fps*1.5 Hz (minimum interval ~22ms) blocks the spurious edge while
+        # accepting real triggers at 1/fps (~33ms for 30Hz). Do NOT set to MAX_FPS or
+        # disable (False) — either removes the debounce and extra frames appear.
+        debounce_fps = self.fps * 1.5
         try:
-            cam.AcquisitionFrameRate.Value = MAX_FPS  # here we go to max fps in order to not be limited
+            cam.AcquisitionFrameRate.Value = debounce_fps
         except genicam.LogicalErrorException:
-            cam.AcquisitionFrameRateAbs.Value = MAX_FPS  # maybe basler 2 cameras ?
-        cam.AcquisitionFrameRateEnable.Value = False  # disable software rate cap; HW trigger controls rate
+            cam.AcquisitionFrameRateAbs.Value = debounce_fps
+        cam.AcquisitionFrameRateEnable.Value = True
         # behavior wrt to these values is a bit strange to me. Important seems to be to use LastImages Strategy and make MaxNumBuffers larger than OutputQueueSize. Otherwise its not guaranteed to work
         cam.MaxNumBuffer.SetValue(1024)  # how many buffers there are in total (empty and full)
         cam.OutputQueueSize.SetValue(
