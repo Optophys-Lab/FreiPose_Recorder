@@ -898,24 +898,21 @@ class Recorder(object):
                         self.video_writer_list[context_id].feed((img, img_nr_camera, img_nr, img_ts))
                     else:
                         self.video_writer_list[context_id].feed(img)
-                    self.multi_view_queue[context_id].put_nowait(img)
-                    # weirdly enough the recording does not mix up frames.. so maybe mixing up happens later ? in the queue
-                    # or at the visualization ?
+                    try:
+                        self.multi_view_queue[context_id].put_nowait(img)
+                    except (Full, QueueOverflow):
+                        pass  # GUI preview can't keep up — drop preview frame, recording continues
                     grabResult.Release()
                 else:
                     self.log.error(grabResult.ErrorCode, grabResult.ErrorDescription)
 
             except genicam.TimeoutException as e:
-                self.log.error(e)
+                if self.stop_event.is_set():
+                    # Expected: RetrieveResult timed out after intentional stop, no new triggers
+                    break
+                cam_ctx = grabResult.GetCameraContext() if 'grabResult' in dir() else '?'
+                self.log.error(f"Camera timeout on cam {cam_ctx} after {self.grab_timeout}ms: {e}")
                 self.error_event.set()
-                break
-            except Full:
-                self.log.error(f"Queue buffer{context_id}overrun !")
-                self.error_event.set()
-                break
-            except QueueOverflow:
-                self.error_event.set()
-                self.log.error(f"Queue buffer{context_id}overrun !")
                 break
         self.cam_array.StopGrabbing()
         self.is_recording = False
