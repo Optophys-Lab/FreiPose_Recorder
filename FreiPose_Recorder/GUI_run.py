@@ -573,15 +573,14 @@ class BASLER_GUI(QMainWindow):
             self.CameraSettings.gain_spin_list[c_id].blockSignals(False)
             self.CameraSettings.color_mode_list[c_id].blockSignals(False)
 
-        try:
+        if 'HW_trigg' in cam_lib:
             self.HWTrig_checkBox.setChecked(cam_lib['HW_trigg'])
+        if 'crf' in cam_lib:
             self.crf_spinBox.setValue(cam_lib['crf'])
+        if 'codec' in cam_lib:
             self.Codec_comboBox.setCurrentText(cam_lib['codec'])
-            self.FrameRateSpin.setValue(cam_lib['fps'])
+        if 'save_path' in cam_lib:
             self.set_save_path(cam_lib['save_path'])
-            #self.basler_recorder.save_path = cam_lib['save_path']
-        except KeyError:
-            self.log.info('No-full general settings found in file')
 
     def set_save_path(self, save_path: (str, Path, None) = None):
         """
