@@ -50,6 +50,7 @@ class BASLER_GUI(QMainWindow):
         self.CameraSettings = None   # is loaded from the GUI_design.ui
         self.session_path = None  # path to the current session
         self.files_copied = False  # flag to check if files have been copied
+        self._reconnect_pending = False
         self.timer_update_counter = 0
         self.rec_start_time = None  # time when recording started
         self.calib_start_timer = None
@@ -763,6 +764,9 @@ class BASLER_GUI(QMainWindow):
         self.SessionIDlineEdit.setText("")
 
     def check_and_parse_messages(self):
+        if self._reconnect_pending and self.socket_comm.connected:
+            self._reconnect_pending = False
+            self.socket_comm.send_json_message(SocketMessage.status_ready)
         try:
             message = self.socket_comm.read_json_message_fast_linebreak()
         except Exception as e:
@@ -826,6 +830,7 @@ class BASLER_GUI(QMainWindow):
                 self.socket_comm.send_json_message(SocketMessage.respond_stop)
                 self.socket_comm.close_client_socket() #only close client conn
                 if self.is_remote_ctr: #only if remote ctr is enabled
+                    self._reconnect_pending = True
                     self.socket_comm.threaded_accept_connection() #sets to listen for new conn
 
             elif message['type'] == MessageType.poll_status.value:
@@ -840,7 +845,12 @@ class BASLER_GUI(QMainWindow):
 
             elif message['type'] == MessageType.disconnected.value:
                 self.log.info("got message that client disconnected")
-                self.exit_remote_mode()
+                if self.is_remote_ctr:
+                    # Stay in remote mode — wait for next client to reconnect
+                    self._reconnect_pending = True
+                    self.socket_comm.threaded_accept_connection()
+                else:
+                    self.exit_remote_mode()
 
             elif message['type'] == MessageType.copy_files.value:
                 self.log.debug('got message to copy files')
