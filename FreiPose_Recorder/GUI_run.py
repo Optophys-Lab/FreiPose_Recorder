@@ -840,7 +840,10 @@ class BASLER_GUI(QMainWindow):
 
             elif message['type'] == MessageType.disconnected.value:
                 self.log.info("got message that client disconnected")
-                self.exit_remote_mode()
+                if self.is_remote_ctr:
+                    self.socket_comm.threaded_accept_connection()
+                else:
+                    self.exit_remote_mode()
 
             elif message['type'] == MessageType.copy_files.value:
                 self.log.debug('got message to copy files')
