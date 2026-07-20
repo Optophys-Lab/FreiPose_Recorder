@@ -64,6 +64,8 @@ class Recorder(object):
         # self._take_name = 'take'
         self._rid = 0
         self.fps = 10
+        self.crf = 0 #to prevent crashes
+
         self._trigger = None
         self.grab_timeout = 10000  # in
         self.internal_queue_size = 100  # Size of the QUEUE for transfering images between threads
@@ -1003,6 +1005,7 @@ class Recorder(object):
             video_name = (Path(self.save_path) / video_name).as_posix()
             self.video_writer_list.append(VideoWriterFast(video_name,
                                                           fps=self.fps,
+                                                          crf=self.crf,
                                                           codec=self.codec))  # was DIVX
         # self.log.debug(print(self.cams_context))
         self.stop_event = stop_event

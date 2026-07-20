@@ -82,7 +82,8 @@ class VideoWriterFast:
             output_params = {"-input_framerate": self.fps, "-vcodec": self.codec, "-crf": self.crf}
             #output_params = {"-input_framerate": self.fps, "-vcodec": "h264_nvenc", "-crf": 0}
             #output_params = {"-vcodec": "libx264", "-crf": 0, "-preset": "fast"}
-            self.stream = WriteGear(output=self.video_path, **output_params)
+            self.stream = WriteGear(output=self.video_path, logging=True, **output_params)
+
             '''
             working codecs h264_nvenc, libx264, mpeg4, mpeg2video, libxvid, libx264rgb
             
