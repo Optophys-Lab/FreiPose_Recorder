@@ -58,6 +58,38 @@
      <string>LoadSettings</string>
     </property>
    </widget>
+   <widget class="QPushButton" name="LoadPfsButton">
+    <property name="geometry">
+     <rect>
+      <x>780</x>
+      <y>10</y>
+      <width>131</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Load a pylon .pfs feature file (incl. ROI/field of view) onto the current camera, or all cameras if 'All cams' is checked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+    <property name="text">
+     <string>Load .pfs</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="SavePfsButton">
+    <property name="geometry">
+     <rect>
+      <x>780</x>
+      <y>50</y>
+      <width>131</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save the current camera state to a pylon .pfs feature file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+    <property name="text">
+     <string>Save .pfs</string>
+    </property>
+   </widget>
    <widget class="QPushButton" name="ScanDevButton">
     <property name="geometry">
      <rect>

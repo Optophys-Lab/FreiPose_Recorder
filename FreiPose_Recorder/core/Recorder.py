@@ -239,6 +239,145 @@ class Recorder(object):
         if was_closed:
             cam.Close()
 
+    @staticmethod
+    def _coerce_to_inc(node, value):
+        """Clamp value to [min, max] of a pylon integer node and round to its increment."""
+        lo, hi = node.GetMin(), node.GetMax()
+        value = int(max(lo, min(hi, value)))
+        try:
+            inc = node.GetInc()
+        except genicam.GenericException:
+            inc = 1
+        if inc and inc > 1:
+            # round down to nearest valid increment relative to the minimum
+            value = lo + ((value - lo) // inc) * inc
+        return int(value)
+
+    def set_roi(self, cam_id: int, width: int, height: int, offset_x: int, offset_y: int):
+        """Set the sensor readout ROI (field of view) for a single camera.
+
+        Values are clamped to the camera limits and rounded to the node increment.
+        Returns the actually-applied (width, height, offset_x, offset_y) so the GUI can
+        read back what the camera accepted (it may snap to increments). Returns None if
+        the ROI could not be set (e.g. camera is currently grabbing)."""
+        was_closed = False
+        cam = self.cam_array[cam_id]
+        if not cam.IsOpen():
+            was_closed = True
+            cam.Open()
+        try:
+            # Order matters: zero the offsets first so Width/Height can grow to the full
+            # sensor, then set size, then set the offsets (OffsetX max depends on Width).
+            try:
+                cam.OffsetX.SetValue(0)
+                cam.OffsetY.SetValue(0)
+            except genicam.LogicalErrorException:
+                pass  # camera without configurable offset
+
+            cam.Width.SetValue(self._coerce_to_inc(cam.Width, width))
+            cam.Height.SetValue(self._coerce_to_inc(cam.Height, height))
+
+            try:
+                cam.OffsetX.SetValue(self._coerce_to_inc(cam.OffsetX, offset_x))
+                cam.OffsetY.SetValue(self._coerce_to_inc(cam.OffsetY, offset_y))
+            except genicam.LogicalErrorException:
+                pass
+
+            applied = (cam.Width.GetValue(), cam.Height.GetValue(),
+                       cam.OffsetX.GetValue(), cam.OffsetY.GetValue())
+        except genicam.AccessException:
+            self.log.warning('Cannot set ROI while camera is running. '
+                             'Stop live view / recording first.')
+            applied = None
+        except genicam.OutOfRangeException as e:
+            self.log.warning(f'ROI value out of range: {e}')
+            applied = None
+        except genicam.LogicalErrorException:
+            self.log.info('ROI (Width/Height/Offset) is not available for this camera')
+            applied = None
+        finally:
+            if was_closed:
+                cam.Close()
+        return applied
+
+    def get_roi(self, cam_id: int) -> dict:
+        """Return the current ROI of a camera as {width, height, offset_x, offset_y}."""
+        was_closed = False
+        cam = self.cam_array[cam_id]
+        if not cam.IsOpen():
+            was_closed = True
+            cam.Open()
+        roi = {}
+        try:
+            roi = {'width': cam.Width.GetValue(), 'height': cam.Height.GetValue(),
+                   'offset_x': cam.OffsetX.GetValue(), 'offset_y': cam.OffsetY.GetValue()}
+        except genicam.LogicalErrorException:
+            pass  # Not available for this camera
+        if was_closed:
+            cam.Close()
+        return roi
+
+    def get_roi_limits(self, cam_id: int) -> dict:
+        """Return min/max/inc for each ROI node, to seed GUI spin boxes.
+
+        Shape: {'width': (min, max, inc), 'height': ..., 'offset_x': ..., 'offset_y': ...}.
+        Empty dict if the camera does not expose these nodes."""
+        was_closed = False
+        cam = self.cam_array[cam_id]
+        if not cam.IsOpen():
+            was_closed = True
+            cam.Open()
+        limits = {}
+        try:
+            for key, node in (('width', cam.Width), ('height', cam.Height),
+                              ('offset_x', cam.OffsetX), ('offset_y', cam.OffsetY)):
+                try:
+                    inc = node.GetInc()
+                except genicam.GenericException:
+                    inc = 1
+                limits[key] = (node.GetMin(), node.GetMax(), inc)
+        except genicam.LogicalErrorException:
+            pass  # Not available for this camera
+        if was_closed:
+            cam.Close()
+        return limits
+
+    def load_pfs(self, cam_id: int, filepath) -> bool:
+        """Load a pylon feature stream (.pfs) file onto a camera (ROI + all features)."""
+        was_closed = False
+        cam = self.cam_array[cam_id]
+        if not cam.IsOpen():
+            was_closed = True
+            cam.Open()
+        ok = False
+        try:
+            pylon.FeaturePersistence.Load(str(filepath), cam.GetNodeMap(), True)
+            ok = True
+        except genicam.GenericException as e:
+            self.log.warning(f'Could not load .pfs file for '
+                             f'{cam.DeviceInfo.GetUserDefinedName()}: {e}')
+        if was_closed:
+            cam.Close()
+        return ok
+
+    def save_pfs(self, cam_id: int, filepath) -> bool:
+        """Save the current camera state to a pylon feature stream (.pfs) file."""
+        was_closed = False
+        cam = self.cam_array[cam_id]
+        if not cam.IsOpen():
+            was_closed = True
+            cam.Open()
+        ok = False
+        try:
+            pylon.FeaturePersistence.Save(str(filepath), cam.GetNodeMap())
+            ok = True
+        except genicam.GenericException as e:
+            self.log.warning(f'Could not save .pfs file for '
+                             f'{cam.DeviceInfo.GetUserDefinedName()}: {e}')
+        if was_closed:
+            cam.Close()
+        return ok
+
     def run_white_balance(self, cam_id: int):
         """Set auto white balance for color cameras"""
         was_closed = False
@@ -508,6 +647,23 @@ class Recorder(object):
             was_closed = True
             cam.Open()
 
+        roi = settings.get('roi')
+        if roi:
+            try:
+                # zero offsets first so size can grow, then set size, then offsets
+                cam.OffsetX.SetValue(0)
+                cam.OffsetY.SetValue(0)
+                cam.Width.SetValue(cls._coerce_to_inc(cam.Width, roi['width']))
+                cam.Height.SetValue(cls._coerce_to_inc(cam.Height, roi['height']))
+                cam.OffsetX.SetValue(cls._coerce_to_inc(cam.OffsetX, roi['offset_x']))
+                cam.OffsetY.SetValue(cls._coerce_to_inc(cam.OffsetY, roi['offset_y']))
+            except genicam.AccessException:
+                print('Cannot set ROI while camera is running')
+            except genicam.LogicalErrorException:
+                pass  # ROI not available for this camera
+            except (KeyError, genicam.OutOfRangeException):
+                pass  # incomplete/out-of-range roi in settings
+
         try:
             gain = settings['gain']
             cam.Gain.SetValue(gain)
@@ -617,6 +773,13 @@ class Recorder(object):
         try:
             color_mode = cam.PixelFormat.GetValue()
             cam_settings[cam_name]['color_mode'] = color_mode
+        except genicam.LogicalErrorException:
+            pass  # Not implemented for this camera
+
+        try:
+            cam_settings[cam_name]['roi'] = {
+                'width': cam.Width.GetValue(), 'height': cam.Height.GetValue(),
+                'offset_x': cam.OffsetX.GetValue(), 'offset_y': cam.OffsetY.GetValue()}
         except genicam.LogicalErrorException:
             pass  # Not implemented for this camera
 

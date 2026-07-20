@@ -4,7 +4,7 @@ import pyqtgraph as pg
 from pyqtgraph import ImageView, RawImageWidget, GraphicsView, ImageItem, GraphicsWidget, PlotWidget
 from datetime import datetime
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QDialog, QSizePolicy, \
-    QGridLayout, QToolBox,  QDoubleSpinBox, QComboBox, QLabel
+    QGridLayout, QToolBox,  QDoubleSpinBox, QSpinBox, QComboBox, QLabel, QPushButton
 from PyQt6 import uic, QtCore, QtGui, QtWidgets
 import numpy as np
 
@@ -204,9 +204,36 @@ class SingleCameraSettings(QWidget):
         self.layout.addWidget(self.colorlabel)
         self.layout.addWidget(self.ColorMode_comboBox)
 
+        # Field of view / ROI controls
+        self.roi_label = QLabel(self)
+        self.roi_label.setText("Field of view (ROI)")
+        self.layout.addWidget(self.roi_label)
+
+        self.Width_spin = self._make_roi_spin("Width")
+        self.Height_spin = self._make_roi_spin("Height")
+        self.OffsetX_spin = self._make_roi_spin("Offset X")
+        self.OffsetY_spin = self._make_roi_spin("Offset Y")
+
+        self.FullFOVButton = QPushButton("Full FOV", self)
+        self.layout.addWidget(self.FullFOVButton)
+
         self.setLayout(self.layout)
         self.setFont(font)
         self.show()
+
+    def _make_roi_spin(self, label: str) -> QSpinBox:
+        """Build a labelled integer spin box for an ROI value and add it to the layout."""
+        lbl = QLabel(self)
+        lbl.setText(label)
+        spin = QSpinBox(self)
+        spin.setMinimum(0)
+        spin.setMaximum(100000)
+        spin.setSingleStep(2)
+        hbox = QHBoxLayout()
+        hbox.addWidget(lbl)
+        hbox.addWidget(spin)
+        self.layout.addLayout(hbox)
+        return spin
     def set_colormodes(self, colormodes:list):
         self.ColorMode_comboBox.clear()
         self.ColorMode_comboBox.addItems(colormodes)
@@ -224,6 +251,11 @@ class CameraSettingsTab(QWidget):
         self.gain_spin_list = []
         self.exposure_spin_list = []
         self.color_mode_list = []
+        self.width_spin_list = []
+        self.height_spin_list = []
+        self.offsetx_spin_list = []
+        self.offsety_spin_list = []
+        self.full_fov_btn_list = []
 
         self.init_ui()
         self.ConnectSignals()
@@ -254,6 +286,11 @@ class CameraSettingsTab(QWidget):
             self.gain_spin_list.append(cam_sett.Gain_spin)
             self.exposure_spin_list.append(cam_sett.ExposureTime_spin)
             self.color_mode_list.append(cam_sett.ColorMode_comboBox)
+            self.width_spin_list.append(cam_sett.Width_spin)
+            self.height_spin_list.append(cam_sett.Height_spin)
+            self.offsetx_spin_list.append(cam_sett.OffsetX_spin)
+            self.offsety_spin_list.append(cam_sett.OffsetY_spin)
+            self.full_fov_btn_list.append(cam_sett.FullFOVButton)
         self.layout.addWidget(self.toolbox)
         self.setFont(font)
         self.show()
@@ -263,6 +300,11 @@ class CameraSettingsTab(QWidget):
         self.gain_spin_list = []
         self.exposure_spin_list = []
         self.color_mode_list = []
+        self.width_spin_list = []
+        self.height_spin_list = []
+        self.offsetx_spin_list = []
+        self.offsety_spin_list = []
+        self.full_fov_btn_list = []
 
         self.toolbox = QToolBox()
         for i in range(self.num_cameras):
@@ -271,6 +313,11 @@ class CameraSettingsTab(QWidget):
             self.gain_spin_list.append(cam_sett.Gain_spin)
             self.exposure_spin_list.append(cam_sett.ExposureTime_spin)
             self.color_mode_list.append(cam_sett.ColorMode_comboBox)
+            self.width_spin_list.append(cam_sett.Width_spin)
+            self.height_spin_list.append(cam_sett.Height_spin)
+            self.offsetx_spin_list.append(cam_sett.OffsetX_spin)
+            self.offsety_spin_list.append(cam_sett.OffsetY_spin)
+            self.full_fov_btn_list.append(cam_sett.FullFOVButton)
         self.layout.addWidget(self.toolbox)
         self.ConnectSignals()  # reconnect with new widgets
 
@@ -283,6 +330,14 @@ class CameraSettingsTab(QWidget):
         """
         self.parent.parent().set_color_mode(color_mode)
 
+    def parent_set_roi(self):
+        """Set the ROI/field of view of the camera, as callback to changes in UI"""
+        self.parent.parent().set_roi()
+
+    def parent_full_fov(self):
+        """Reset the current camera to its full field of view"""
+        self.parent.parent().set_full_fov()
+
     def ConnectSignals(self):
         for spinbox in self.exposure_spin_list:
             spinbox.valueChanged.connect(self.parent_gain_exposure)
@@ -290,6 +345,11 @@ class CameraSettingsTab(QWidget):
             spinbox.valueChanged.connect(self.parent_gain_exposure)
         for spinbox in self.color_mode_list:
             spinbox.currentTextChanged.connect(self.parent_color_mode)
+        for spinbox in (self.width_spin_list + self.height_spin_list
+                        + self.offsetx_spin_list + self.offsety_spin_list):
+            spinbox.valueChanged.connect(self.parent_set_roi)
+        for button in self.full_fov_btn_list:
+            button.clicked.connect(self.parent_full_fov)
 
 
 class RemoteConnDialog(QtWidgets.QDialog):

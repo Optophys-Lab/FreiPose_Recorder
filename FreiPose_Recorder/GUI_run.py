@@ -201,29 +201,70 @@ class BASLER_GUI(QMainWindow):
         self.MultiViewWidget.num_cameras = nr_cams
         self.CameraSettings.num_cameras = nr_cams
 
+    def _seed_cam_widgets(self, c_id, cam):
+        """Populate the GUI widgets for one camera from its current state (values + limits).
+
+        Signals are blocked during seeding so it does not trigger set-callbacks back onto
+        the camera. Reused on connect and after loading a .pfs file."""
+        cs = self.CameraSettings
+        cs.toolbox.setItemText(c_id, cam.DeviceInfo.GetUserDefinedName())
+
+        widgets = [cs.exposure_spin_list[c_id], cs.gain_spin_list[c_id],
+                   cs.color_mode_list[c_id], cs.width_spin_list[c_id],
+                   cs.height_spin_list[c_id], cs.offsetx_spin_list[c_id],
+                   cs.offsety_spin_list[c_id]]
+        for w in widgets:
+            w.blockSignals(True)
+
+        # exposure / gain
+        cs.exposure_spin_list[c_id].setValue(self.basler_recorder.get_cam_exposureTime(cam))
+        cs.gain_spin_list[c_id].setValue(self.basler_recorder.get_cam_gain(cam))
+        gain_limits, exp_limits, colormodes = self.basler_recorder.get_cam_limits(cam)
+        if exp_limits:
+            cs.exposure_spin_list[c_id].setMinimum(exp_limits[0])
+            cs.exposure_spin_list[c_id].setMaximum(exp_limits[1])
+        if gain_limits:
+            cs.gain_spin_list[c_id].setMinimum(gain_limits[0])
+            cs.gain_spin_list[c_id].setMaximum(gain_limits[1])
+        # color modes
+        cs.color_mode_list[c_id].clear()
+        cs.color_mode_list[c_id].addItems(colormodes)
+
+        # ROI / field of view
+        roi_limits = self.basler_recorder.get_roi_limits(c_id)
+        roi = self.basler_recorder.get_roi(c_id)
+        roi_map = [('width', cs.width_spin_list[c_id]), ('height', cs.height_spin_list[c_id]),
+                   ('offset_x', cs.offsetx_spin_list[c_id]), ('offset_y', cs.offsety_spin_list[c_id])]
+        for key, spin in roi_map:
+            if key in roi_limits:
+                lo, hi, inc = roi_limits[key]
+                spin.setMinimum(int(lo))
+                spin.setMaximum(int(hi))
+                spin.setSingleStep(int(inc) if inc else 1)
+            if key in roi:
+                spin.setValue(int(roi[key]))
+
+        for w in widgets:
+            w.blockSignals(False)
+
+    def _write_applied_roi(self, cam_id, applied):
+        """Reflect the actually-applied ROI values in the spin boxes (camera may snap to
+        increments). `applied` is (width, height, offset_x, offset_y) or None."""
+        if applied is None:
+            return
+        cs = self.CameraSettings
+        spins = (cs.width_spin_list[cam_id], cs.height_spin_list[cam_id],
+                 cs.offsetx_spin_list[cam_id], cs.offsety_spin_list[cam_id])
+        for spin, val in zip(spins, applied):
+            spin.blockSignals(True)
+            spin.setValue(int(val))
+            spin.blockSignals(False)
+
     def connect_to_cams(self):
         self.basler_recorder.connect_cams()
 
         for c_id, cam in enumerate(self.basler_recorder.cam_array):
-            self.CameraSettings.toolbox.setItemText(c_id, cam.DeviceInfo.GetUserDefinedName())
-            self.CameraSettings.exposure_spin_list[c_id].blockSignals(True)  # block triggering of events
-            self.CameraSettings.gain_spin_list[c_id].blockSignals(True)
-            self.CameraSettings.color_mode_list[c_id].blockSignals(True)
-            self.CameraSettings.exposure_spin_list[c_id].setValue(self.basler_recorder.get_cam_exposureTime(cam))
-            self.CameraSettings.gain_spin_list[c_id].setValue(self.basler_recorder.get_cam_gain(cam))
-            gain_limits, exp_limits, colormodes = self.basler_recorder.get_cam_limits(cam)
-            if exp_limits:
-                self.CameraSettings.exposure_spin_list[c_id].setMinimum(exp_limits[0])
-                self.CameraSettings.exposure_spin_list[c_id].setMaximum(exp_limits[1])
-            if gain_limits:
-                self.CameraSettings.gain_spin_list[c_id].setMinimum(gain_limits[0])
-                self.CameraSettings.gain_spin_list[c_id].setMaximum(gain_limits[1])
-            # add color modes to list
-            self.CameraSettings.color_mode_list[c_id].clear()
-            self.CameraSettings.color_mode_list[c_id].addItems(colormodes)
-            self.CameraSettings.exposure_spin_list[c_id].blockSignals(False)  # unblock triggering of events
-            self.CameraSettings.gain_spin_list[c_id].blockSignals(False)
-            self.CameraSettings.color_mode_list[c_id].blockSignals(False)
+            self._seed_cam_widgets(c_id, cam)
 
         self.CameraSettings.toolbox.setCurrentIndex(0)
         self.RUNButton.setEnabled(True)
@@ -570,6 +611,11 @@ class BASLER_GUI(QMainWindow):
             self.CameraSettings.exposure_spin_list[c_id].blockSignals(False)
             self.CameraSettings.gain_spin_list[c_id].blockSignals(False)
             self.CameraSettings.color_mode_list[c_id].blockSignals(False)
+            # reflect the applied ROI (read back from the camera in case it snapped values)
+            applied_roi = self.basler_recorder.get_roi(c_id)
+            if applied_roi:
+                self._write_applied_roi(c_id, (applied_roi['width'], applied_roi['height'],
+                                               applied_roi['offset_x'], applied_roi['offset_y']))
 
         try:
             self.HWTrig_checkBox.setChecked(cam_lib['HW_trigg'])
@@ -643,6 +689,59 @@ class BASLER_GUI(QMainWindow):
         self.basler_recorder.set_color_mode(current_camid, color_mode)
         # exp_time = self.CameraSettings.exposure_spin_list[current_camid]
 
+    def set_roi(self):
+        """Set the ROI / field of view for the current camera from the GUI spin boxes."""
+        current_camid = self.get_current_tab()
+        cs = self.CameraSettings
+        applied = self.basler_recorder.set_roi(current_camid,
+                                               cs.width_spin_list[current_camid].value(),
+                                               cs.height_spin_list[current_camid].value(),
+                                               cs.offsetx_spin_list[current_camid].value(),
+                                               cs.offsety_spin_list[current_camid].value())
+        self._write_applied_roi(current_camid, applied)
+
+    def set_full_fov(self):
+        """Reset the current camera to its maximum field of view."""
+        current_camid = self.get_current_tab()
+        roi_limits = self.basler_recorder.get_roi_limits(current_camid)
+        if not roi_limits:
+            return
+        applied = self.basler_recorder.set_roi(current_camid,
+                                               roi_limits['width'][1], roi_limits['height'][1],
+                                               0, 0)
+        self._write_applied_roi(current_camid, applied)
+
+    def load_pfs(self):
+        """Load a pylon .pfs feature file onto the current (or all) camera(s)."""
+        if not self.basler_recorder.cams_connected:
+            self.log.warning('Not connected to cameras, cant load .pfs')
+            return
+        pfs_file = QFileDialog.getOpenFileName(self, 'Open pylon feature file', "",
+                                               "Pylon feature stream (*.pfs)")
+        if not pfs_file[0]:
+            return
+        if self.All_cams_checkBox.isChecked():
+            cam_ids = range(len(self.basler_recorder.cam_array))
+        else:
+            cam_ids = [self.get_current_tab()]
+        for c_id in cam_ids:
+            if self.basler_recorder.load_pfs(c_id, pfs_file[0]):
+                self._seed_cam_widgets(c_id, self.basler_recorder.cam_array[c_id])
+
+    def save_pfs(self):
+        """Save the current camera state to a pylon .pfs feature file."""
+        if not self.basler_recorder.cams_connected:
+            self.log.warning('Not connected to cameras, cant save .pfs')
+            return
+        pfs_file = QFileDialog.getSaveFileName(self, 'Save pylon feature file', "",
+                                               "Pylon feature stream (*.pfs)")
+        if not pfs_file[0]:
+            return
+        filename = pfs_file[0]
+        if not filename.endswith('.pfs'):
+            filename += '.pfs'
+        self.basler_recorder.save_pfs(self.get_current_tab(), filename)
+
     def flip_x(self):
         """
         Flip image on x axis
@@ -667,6 +766,9 @@ class BASLER_GUI(QMainWindow):
 
         self.SettingsSaveButton.clicked.connect(self.save_settings)
         self.SettingsLoadButton.clicked.connect(self.load_settings)
+
+        self.LoadPfsButton.clicked.connect(self.load_pfs)
+        self.SavePfsButton.clicked.connect(self.save_pfs)
 
         self.AutoExposeButton.clicked.connect(self.auto_expose)
         self.AutoGainButton.clicked.connect(self.auto_gain)
