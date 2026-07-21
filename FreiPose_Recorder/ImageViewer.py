@@ -217,6 +217,13 @@ class SingleCameraSettings(QWidget):
         self.FullFOVButton = QPushButton("Full FOV", self)
         self.layout.addWidget(self.FullFOVButton)
 
+        # TTL output line (LineSource fixed to ExposureActive)
+        self.outputlabel = QLabel(self)
+        self.outputlabel.setText("TTL output line")
+        self.OutputLine_comboBox = QComboBox(self)
+        self.layout.addWidget(self.outputlabel)
+        self.layout.addWidget(self.OutputLine_comboBox)
+
         self.setLayout(self.layout)
         self.setFont(font)
         self.show()
@@ -256,6 +263,7 @@ class CameraSettingsTab(QWidget):
         self.offsetx_spin_list = []
         self.offsety_spin_list = []
         self.full_fov_btn_list = []
+        self.output_line_list = []
 
         self.init_ui()
         self.ConnectSignals()
@@ -291,6 +299,7 @@ class CameraSettingsTab(QWidget):
             self.offsetx_spin_list.append(cam_sett.OffsetX_spin)
             self.offsety_spin_list.append(cam_sett.OffsetY_spin)
             self.full_fov_btn_list.append(cam_sett.FullFOVButton)
+            self.output_line_list.append(cam_sett.OutputLine_comboBox)
         self.layout.addWidget(self.toolbox)
         self.setFont(font)
         self.show()
@@ -305,6 +314,7 @@ class CameraSettingsTab(QWidget):
         self.offsetx_spin_list = []
         self.offsety_spin_list = []
         self.full_fov_btn_list = []
+        self.output_line_list = []
 
         self.toolbox = QToolBox()
         for i in range(self.num_cameras):
@@ -318,6 +328,7 @@ class CameraSettingsTab(QWidget):
             self.offsetx_spin_list.append(cam_sett.OffsetX_spin)
             self.offsety_spin_list.append(cam_sett.OffsetY_spin)
             self.full_fov_btn_list.append(cam_sett.FullFOVButton)
+            self.output_line_list.append(cam_sett.OutputLine_comboBox)
         self.layout.addWidget(self.toolbox)
         self.ConnectSignals()  # reconnect with new widgets
 
@@ -338,6 +349,10 @@ class CameraSettingsTab(QWidget):
         """Reset the current camera to its full field of view"""
         self.parent.parent().set_full_fov()
 
+    def parent_set_output_line(self, line: str):
+        """Set the TTL output line of the camera, as callback to changes in UI"""
+        self.parent.parent().set_output_line()
+
     def ConnectSignals(self):
         for spinbox in self.exposure_spin_list:
             spinbox.valueChanged.connect(self.parent_gain_exposure)
@@ -350,6 +365,8 @@ class CameraSettingsTab(QWidget):
             spinbox.valueChanged.connect(self.parent_set_roi)
         for button in self.full_fov_btn_list:
             button.clicked.connect(self.parent_full_fov)
+        for combo in self.output_line_list:
+            combo.currentTextChanged.connect(self.parent_set_output_line)
 
 
 class RemoteConnDialog(QtWidgets.QDialog):

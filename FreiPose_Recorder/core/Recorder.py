@@ -380,6 +380,94 @@ class Recorder(object):
             cam.Close()
         return ok
 
+    @staticmethod
+    def _output_capable_lines(cam) -> list:
+        """Names of digital lines that can be configured as Output (for the GUI combo)."""
+        lines = []
+        try:
+            for ln in cam.LineSelector.Symbolics:
+                cam.LineSelector.Value = ln
+                try:
+                    if 'Output' in cam.LineMode.Symbolics:
+                        lines.append(ln)
+                except genicam.GenericException:
+                    continue
+        except genicam.LogicalErrorException:
+            pass  # camera without configurable lines
+        return lines
+
+    @staticmethod
+    def _read_output_line(cam) -> str:
+        """Name of the line currently in Output mode, or '' if none/not available."""
+        try:
+            for ln in cam.LineSelector.Symbolics:
+                cam.LineSelector.Value = ln
+                try:
+                    if cam.LineMode.GetValue() == 'Output':
+                        return ln
+                except genicam.GenericException:
+                    continue
+        except genicam.LogicalErrorException:
+            pass
+        return ''
+
+    def get_output_line_options(self, cam_id: int) -> list:
+        """Available output-capable line names for a camera (for seeding the GUI combo)."""
+        was_closed = False
+        cam = self.cam_array[cam_id]
+        if not cam.IsOpen():
+            was_closed = True
+            cam.Open()
+        lines = self._output_capable_lines(cam)
+        if was_closed:
+            cam.Close()
+        return lines
+
+    def get_output_line(self, cam_id: int) -> str:
+        """The line currently configured as TTL output, or '' if none."""
+        was_closed = False
+        cam = self.cam_array[cam_id]
+        if not cam.IsOpen():
+            was_closed = True
+            cam.Open()
+        line = self._read_output_line(cam)
+        if was_closed:
+            cam.Close()
+        return line
+
+    def set_output_line(self, cam_id: int, line: str):
+        """Configure a TTL output line (LineMode=Output, LineSource=ExposureActive).
+
+        Pass a falsy value or 'Off' to disable output (revert the current output line to
+        Input, best-effort — some physical lines are output-only and cannot be changed)."""
+        was_closed = False
+        cam = self.cam_array[cam_id]
+        if not cam.IsOpen():
+            was_closed = True
+            cam.Open()
+        try:
+            if line and line != 'Off':
+                cam.LineSelector.Value = line
+                cam.LineMode.Value = 'Output'
+                cam.LineSource.Value = 'ExposureActive'
+            else:
+                current = self._read_output_line(cam)
+                if current:
+                    cam.LineSelector.Value = current
+                    try:
+                        cam.LineMode.Value = 'Input'
+                    except genicam.GenericException:
+                        self.log.info('Output line cannot be disabled (fixed output line)')
+        except genicam.AccessException:
+            self.log.warning('Cannot set output line while camera is running. '
+                             'Stop live view / recording first.')
+        except genicam.LogicalErrorException:
+            self.log.info('Output line configuration is not available for this camera')
+        except genicam.InvalidArgumentException:
+            self.log.warning(f'Output line {line} / source ExposureActive not available')
+        if was_closed:
+            cam.Close()
+
     def run_white_balance(self, cam_id: int):
         """Set auto white balance for color cameras"""
         was_closed = False
@@ -725,12 +813,19 @@ class Recorder(object):
         except genicam.LogicalErrorException:
             print('Could not set trigger line')
 
-        line_out = settings.get('lineOUT', None)
-        if line_out:
-            cam.LineSelector.Value = line_out
-            cam.LineMode.Value = "Output"
-            # set to exposureactive
-            cam.LineSource.Value = "ExposureActive"
+        # 'output_line' (new) supersedes the legacy 'lineOUT' string; both are a line name.
+        line_out = settings.get('output_line') or settings.get('lineOUT')
+        if line_out and line_out != 'Off':
+            try:
+                cam.LineSelector.Value = line_out
+                cam.LineMode.Value = "Output"
+                # set to exposureactive
+                cam.LineSource.Value = "ExposureActive"
+            except genicam.LogicalErrorException:
+                print('Could not set output line')
+            except genicam.InvalidArgumentException:
+                print(f'Output line {line_out} not available for '
+                      f'{cam.DeviceInfo.GetUserDefinedName()} camera')
 
         if was_closed:
             cam.Close()
@@ -785,8 +880,11 @@ class Recorder(object):
         except genicam.LogicalErrorException:
             pass  # Not implemented for this camera
 
-        # if implemet savign and setting lines need to cycle trough all of them
-        #problem need to run trough all lines to get all settings
+        # TTL output line: which line (if any) is currently configured as Output
+        try:
+            cam_settings[cam_name]['output_line'] = cls._read_output_line(cam)
+        except genicam.LogicalErrorException:
+            pass  # Not implemented for this camera
 
         if was_closed:
             cam.Close()

@@ -212,7 +212,7 @@ class BASLER_GUI(QMainWindow):
         widgets = [cs.exposure_spin_list[c_id], cs.gain_spin_list[c_id],
                    cs.color_mode_list[c_id], cs.width_spin_list[c_id],
                    cs.height_spin_list[c_id], cs.offsetx_spin_list[c_id],
-                   cs.offsety_spin_list[c_id]]
+                   cs.offsety_spin_list[c_id], cs.output_line_list[c_id]]
         for w in widgets:
             w.blockSignals(True)
 
@@ -243,6 +243,13 @@ class BASLER_GUI(QMainWindow):
                 spin.setSingleStep(int(inc) if inc else 1)
             if key in roi:
                 spin.setValue(int(roi[key]))
+
+        # TTL output line: 'Off' + the camera's output-capable lines
+        out_combo = cs.output_line_list[c_id]
+        out_combo.clear()
+        out_combo.addItems(['Off'] + self.basler_recorder.get_output_line_options(c_id))
+        current_line = self.basler_recorder.get_output_line(c_id)
+        out_combo.setCurrentText(current_line if current_line else 'Off')
 
         for w in widgets:
             w.blockSignals(False)
@@ -616,6 +623,12 @@ class BASLER_GUI(QMainWindow):
             if applied_roi:
                 self._write_applied_roi(c_id, (applied_roi['width'], applied_roi['height'],
                                                applied_roi['offset_x'], applied_roi['offset_y']))
+            # reflect the applied TTL output line
+            out_combo = self.CameraSettings.output_line_list[c_id]
+            out_combo.blockSignals(True)
+            applied_line = self.basler_recorder.get_output_line(c_id)
+            out_combo.setCurrentText(applied_line if applied_line else 'Off')
+            out_combo.blockSignals(False)
 
         try:
             self.HWTrig_checkBox.setChecked(cam_lib['HW_trigg'])
@@ -710,6 +723,12 @@ class BASLER_GUI(QMainWindow):
                                                roi_limits['width'][1], roi_limits['height'][1],
                                                0, 0)
         self._write_applied_roi(current_camid, applied)
+
+    def set_output_line(self):
+        """Set the TTL output line for the current camera from its combo box."""
+        current_camid = self.get_current_tab()
+        line = self.CameraSettings.output_line_list[current_camid].currentText()
+        self.basler_recorder.set_output_line(current_camid, line)
 
     def load_pfs(self):
         """Load a pylon .pfs feature file onto the current (or all) camera(s)."""
