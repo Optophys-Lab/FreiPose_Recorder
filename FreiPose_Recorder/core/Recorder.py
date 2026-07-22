@@ -40,6 +40,8 @@ class Recorder(object):
     def __init__(self, verbosity=0, write_timestamps=False):
         self.write_timestamps = write_timestamps
         self.codec = 'divx'
+        self.crf = 0
+        self.per_cam_crf = {}
         self.video_writer_list = []  # list of video writers
         self.is_recording = False
         self.is_viewing = False
@@ -536,7 +538,7 @@ class Recorder(object):
 
         try:
             flipY = settings['flipY']
-            cam.ReverseX.SetValue(flipY)
+            cam.ReverseY.SetValue(flipY)
         except genicam.LogicalErrorException:
             pass  # Not implemented for this camera
         except KeyError:
@@ -841,12 +843,14 @@ class Recorder(object):
                 self._config_cams_continuous(cam)
 
             self.cams_context[cam.GetCameraContext()] = c_id
-            video_name = f"{filename}_{timestamp}_" \
-                         f"{cam.DeviceInfo.GetUserDefinedName()}.mp4"
+            cam_name = cam.DeviceInfo.GetUserDefinedName()
+            video_name = f"{filename}_{timestamp}_{cam_name}.mp4"
             video_name = (Path(self.save_path) / video_name).as_posix()
+            cam_crf = self.per_cam_crf.get(cam_name, self.crf)
             self.video_writer_list.append(VideoWriterFast(video_name,
                                                           fps=self.fps,
-                                                          codec=self.codec))  # was DIVX
+                                                          codec=self.codec,
+                                                          crf=cam_crf))
         # self.log.debug(print(self.cams_context))
         self.stop_event = stop_event
         self.error_event.clear()

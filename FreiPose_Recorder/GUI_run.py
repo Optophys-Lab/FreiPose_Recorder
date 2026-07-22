@@ -513,13 +513,16 @@ class BASLER_GUI(QMainWindow):
 
         # get active camera settings.. save those to json with cam name
         cam_lib = {}
+        global_crf = self.crf_spinBox.value()
         for cam in self.basler_recorder.cam_array:
             cam_settings = self.basler_recorder.get_cam_settings(cam)
             cam_lib.update(**cam_settings)
+            cam_name = cam.DeviceInfo.GetUserDefinedName()
+            cam_lib[cam_name]['crf'] = self.basler_recorder.per_cam_crf.get(cam_name, global_crf)
 
         cam_lib.update(**{'save_path': self.basler_recorder.save_path, 'fps': self.FrameRateSpin.value(),
                           "HW_trigg": self.HWTrig_checkBox.isChecked(), 'codec': self.Codec_comboBox.currentText(),
-                          "crf": self.crf_spinBox.value()})
+                          "crf": global_crf})
 
         # open file dialog for where to save
         settings_file = QFileDialog.getSaveFileName(self, 'Save settings file', "",
@@ -556,13 +559,16 @@ class BASLER_GUI(QMainWindow):
             cam_lib = json.load(fi)
 
         for c_id, cam in enumerate(self.basler_recorder.cam_array):
+            cam_name = cam.DeviceInfo.GetUserDefinedName()
             try:
-                settings = cam_lib[cam.DeviceInfo.GetUserDefinedName()]
+                settings = cam_lib[cam_name]
             except KeyError:
-                self.log.info(f'No settings found for cam: {cam.DeviceInfo.GetUserDefinedName()} '
+                self.log.info(f'No settings found for cam: {cam_name} '
                               f'with SN: {cam.DeviceInfo.GetSerialNumber()}')
                 continue
             self.basler_recorder.set_cam_settings(cam, settings)
+            if 'crf' in settings:
+                self.basler_recorder.per_cam_crf[cam_name] = settings['crf']
             self.CameraSettings.exposure_spin_list[c_id].blockSignals(True)
             self.CameraSettings.gain_spin_list[c_id].blockSignals(True)
             self.CameraSettings.color_mode_list[c_id].blockSignals(True)
@@ -802,7 +808,7 @@ class BASLER_GUI(QMainWindow):
                         self.FrameRateSpin.setValue(message["frame_rate"])
                 except KeyError:
                     pass
-                self.remote_message_timer.setInterval(5000)  # increase the interval to 10s
+                self.remote_message_timer.setInterval(500)
 
                 if message['type'] == MessageType.start_video_rec.value:
                     self.log.info("got message to start recording")
